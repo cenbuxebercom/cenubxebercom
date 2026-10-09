@@ -64,47 +64,66 @@ const JSON_FORMAT = `
 Respond with ONLY one JSON object (no markdown, no code fences) with exactly these keys:
 {"skip": boolean, "skip_reason": string, "title": string, "excerpt": string, "body": string, "category": one of [${slugs.join(", ")}]}`;
 
+/** Pulsuz səviyyədə hər modelin ayrıca günlük limiti var — biri dolanda növbətiyə keçirik. */
+const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
+const exhausted = new Map<string, number>(); // model -> nə vaxta qədər istifadə olunmasın
+
+function parseJsonLoose(text: string): unknown {
+  const t = text.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+  try { return JSON.parse(t); } catch { /* aşağıda { ... } çıxarılır */ }
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+  throw new Error("json");
+}
+
 /** Google Gemini — pulsuz səviyyə (Google AI Studio açarı, kart tələb olunmur). */
 async function geminiRewrite(parts: unknown[]): Promise<unknown> {
   const key = process.env.GEMINI_API_KEY!;
-  const model = (process.env.GEMINI_MODEL || "gemini-3.8-flash").trim();
+  const custom = (process.env.GEMINI_MODEL || "").trim();
+  const models = Array.from(new Set([...(custom ? [custom] : []), ...GEMINI_MODELS]));
   let lastErr = "";
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "x-goog-api-key": key, "content-type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM + JSON_FORMAT }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0.8, maxOutputTokens: 16384 },
-      }),
-      signal: AbortSignal.timeout(100_000),
-    });
-    if (res.status === 429 || res.status === 503) {
-      const eb = await res.json().catch(() => null);
-      const detail: string = String(eb?.error?.message ?? "").replace(/\s+/g, " ").slice(0, 220);
-      const daily = /per ?day|daily|PerDay/i.test(JSON.stringify(eb ?? {}));
-      lastErr = res.status === 429
-        ? `Gemini pulsuz limiti doldu${daily ? " (GÜNLÜK limit — sabaha qədər gözləyin və ya Google AI Studio-da Cloud Billing aktiv edin)" : " (dəqiqəlik limit)"}: ${detail}`
-        : `Gemini müvəqqəti məşğuldur (503): ${detail}`;
-      if (daily) break; // günlük limit dolub — təkrar sınamağın mənası yoxdur
-      const m = /retry in ([\d.]+)s/i.exec(detail);
-      await sleep(Math.min(25_000, (m ? Math.ceil(Number(m[1])) * 1000 : 8000 * (attempt + 1)) + 500));
-      continue;
-    }
-    const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(`Gemini ${res.status}: ${data?.error?.message ?? "xəta"}`.slice(0, 300));
-    if (data?.promptFeedback?.blockReason) throw new Error(`Gemini materialı blokladı (${data.promptFeedback.blockReason})`);
-    const outParts: { text?: string; thought?: boolean }[] = data?.candidates?.[0]?.content?.parts ?? [];
-    const text = outParts.filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim();
-    if (!text) throw new Error(`Gemini boş cavab qaytardı (${data?.candidates?.[0]?.finishReason ?? "?"})`);
-    try {
-      return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
-    } catch {
-      throw new Error("Gemini cavabı JSON formatında deyil");
+  for (const model of models) {
+    if ((exhausted.get(model) ?? 0) > Date.now()) continue;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": key, "content-type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM + JSON_FORMAT }] },
+          contents: [{ role: "user", parts }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.8, maxOutputTokens: 16384 },
+        }),
+        signal: AbortSignal.timeout(100_000),
+      });
+      if (res.status === 429 || res.status === 503 || res.status === 404) {
+        const eb = await res.json().catch(() => null);
+        const raw = JSON.stringify(eb ?? {});
+        const detail: string = String(eb?.error?.message ?? "").replace(/\s+/g, " ").slice(0, 160);
+        if (res.status === 404) { exhausted.set(model, Date.now() + 6 * 3600_000); lastErr = `${model} tapılmadı`; break; }
+        const daily = /per ?day|PerDay|daily/i.test(raw);
+        lastErr = res.status === 429
+          ? `${model}: pulsuz ${daily ? "GÜNLÜK" : "dəqiqəlik"} limit doldu — ${detail}`
+          : `${model}: müvəqqəti məşğuldur (503)`;
+        if (res.status === 429 && daily) { exhausted.set(model, Date.now() + 3 * 3600_000); break; } // növbəti modelə keç
+        const m = /retry in ([\d.]+)s/i.exec(detail);
+        await sleep(Math.min(25_000, (m ? Math.ceil(Number(m[1])) * 1000 : 6000 * (attempt + 1)) + 500));
+        continue;
+      }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(`Gemini ${model} ${res.status}: ${data?.error?.message ?? "xəta"}`.slice(0, 300));
+      if (data?.promptFeedback?.blockReason) throw new Error(`Gemini materialı blokladı (${data.promptFeedback.blockReason})`);
+      const outParts: { text?: string; thought?: boolean }[] = data?.candidates?.[0]?.content?.parts ?? [];
+      const text = outParts.filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim();
+      if (!text) { lastErr = `${model}: boş cavab (${data?.candidates?.[0]?.finishReason ?? "?"})`; continue; }
+      try {
+        return parseJsonLoose(text);
+      } catch {
+        lastErr = `${model}: cavab JSON formatında deyil`;
+        continue; // təkrar sına
+      }
     }
   }
-  throw new Error(lastErr || "Gemini cavab vermədi");
+  throw new Error(`Gemini limiti doldu və ya cavab vermədi. ${lastErr}`.slice(0, 300));
 }
 
 async function anthropicRewrite(user: string): Promise<Rewritten> {

@@ -151,7 +151,7 @@ export async function processItem(source: Source, cand: Candidate): Promise<Proc
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[import]", url, msg);
     // AI limiti (müvəqqəti) — xəbəri "uğursuz" yazma, növbəti yoxlamada təkrar sınansın
-    if (/limiti doldu|müvəqqəti məşğul|429|quota/i.test(msg)) {
+    if (/limit|müvəqqəti məşğul|429|quota|cavab vermədi|JSON/i.test(msg)) {
       await getDb()?.from("import_log").delete().eq("url", url).eq("status", "processing");
     } else {
       await log(url, source.id, "failed", { error: msg });
