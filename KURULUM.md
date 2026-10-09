@@ -63,7 +63,7 @@ Nəticəni olduğu kimi dəyər xanasına yapışdırın. Hər dəyişəndən so
 
 ## 3b. Əlaqə formundan gələn mesajların `info@cenubxeber.com`-a düşməsi (Resend)
 
-Əlaqə formu hər mesajı **həm admin paneldəki "Mesajlar" bölməsinə**, həm də **e-poçtla `info@cenubxeber.com`-a** göndərir.
+Əlaqə formu hər mesajı **e-poçtla `info@cenubxeber.com`-a** göndərir.
 E-poçt göndərmək üçün Resend (pulsuz plan: ayda 3000 məktub) lazımdır:
 
 1. https://resend.com → hesab yaradın → **Domains → Add Domain** → `cenubxeber.com`.
@@ -77,7 +77,7 @@ E-poçt göndərmək üçün Resend (pulsuz plan: ayda 3000 məktub) lazımdır:
 `SMTP_USER` = Gmail ünvanınız, `SMTP_PASS` = həmin 16 simvol, `CONTACT_TO_EMAIL` = mesajların düşəcəyi ünvan (məs. eyni Gmail). Redeploy.
 `SMTP_USER`/`SMTP_PASS` varsa Resend əvəzinə SMTP istifadə olunur.
 
-**Yoxlama və xətaların səbəbi:** admin paneldə **Mesajlar → “E-poçt testi göndər”** düyməsi test məktubu göndərir və problem varsa
+**Yoxlama və xətaların səbəbi:** admin panelin yuxarısındakı **“E-poçt testi”** düyməsi test məktubu göndərir və problem varsa
 Resend-in dəqiq xəta mətnini göstərir. Hər mesajın yanında da “e-poçta göndərildi” / “e-poçta düşmədi: …” statusu görünür
 (bunun üçün `supabase/schema.sql`-i bir də işə salın). Ən çox rast gəlinən səbəblər:
 
@@ -135,7 +135,7 @@ Vercel → **Settings → Domains** bölməsində `cenubxeber.com` və `www.cenu
 - Imkanlar:
   - **Xəbərlər** — siyahı, axtarış, redaktə, silmə, “Gündəm”ə əlavə et/çıxar, dərc et/gizlət (qaralama).
   - **Yeni xəbər** — başlıq, kateqoriya, müəllif, qısa təsvir, mətn (abzaslar boş sətirlə ayrılır), şəkil (ImgBB), dərc tarixi və saatı.
-  - **Mesajlar** — “Əlaqə” səhifəsindən gələn mesajlar.
+  - **E-poçt testi** düyməsi — test məktubu göndərib e-poçt ayarlarını yoxlayır. “Əlaqə” səhifəsindəki form mesajı birbaşa `info@cenubxeber.com`-a göndərir (admin paneldə saxlanılmır).
 - Gələcək tarix seçsəniz xəbər həmin vaxtdan sonra saytda görünəcək.
 - Paneldə dəyişiklik edəndə sayt keşi avtomatik təzələnir.
 

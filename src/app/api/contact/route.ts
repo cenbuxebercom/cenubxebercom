@@ -1,7 +1,7 @@
 import { json, sameOrigin } from "@/lib/auth";
-import { getDb } from "@/lib/db";
 import { sendContactMail } from "@/lib/mail";
 
+/** Əlaqə formu: mesaj birbaşa redaksiyanın e-poçtuna (info@cenubxeber.com) göndərilir. */
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return json({ error: "Etibarsız mənbə" }, 403);
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -15,16 +15,8 @@ export async function POST(req: Request) {
   }
 
   const mail = await sendContactMail({ name, email, message });
-  const mail_status = mail.ok ? "sent" : mail.error.slice(0, 300);
-
-  // admin paneldəki "Mesajlar" üçün bazaya yaz (e-poçt statusu ilə)
-  const db = getDb();
-  let saved = false;
-  if (db) {
-    let { error } = await db.from("messages").insert({ name, email, message, mail_status });
-    if (error) ({ error } = await db.from("messages").insert({ name, email, message })); // mail_status sütunu hələ yoxdursa
-    saved = !error;
+  if (!mail.ok) {
+    return json({ error: "Mesaj göndərilmədi. Zəhmət olmasa bir az sonra yenidən cəhd edin və ya info@cenubxeber.com ünvanına birbaşa yazın." }, 502);
   }
-  if (!mail.ok && !saved) return json({ error: "Mesaj göndərilmədi, bir az sonra yenidən cəhd edin" }, 500);
   return json({ ok: true });
 }
