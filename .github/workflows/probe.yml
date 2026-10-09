@@ -1,0 +1,10 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in https://milli.az/ https://news.milli.az/sitemap-latest.xml https://news.milli.az/showbiz/1347090.html; do
+            curl -sL -m 20 -A "Mozilla/5.0 (compatible; CenubXeberBot/1.0; +https://www.cenubxeber.com)" -o /tmp/o -w "$u %{http_code}\n" "$u"; head -c 120 /tmp/o | tr '\n' ' '; echo
+          done
