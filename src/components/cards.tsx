@@ -22,7 +22,7 @@ export function ListItem({ a, badge }: { a: Article; badge?: string }) {
   return (
     <article className="flex gap-4 border-b border-[#e6e1db] py-5 first:pt-0 last:border-b-0">
       <Link href={href(a)} className="block h-[104px] w-[104px] shrink-0 overflow-hidden rounded-xl">
-        <Img src={a.image} alt={a.title} className="transition-transform duration-500 hover:scale-105" />
+        <Img src={a.image} alt={a.title} sizes="104px" className="transition-transform duration-500 hover:scale-105" />
       </Link>
       <div className="flex flex-col justify-center gap-4">
         {badge && <div><Badge>{badge}</Badge></div>}
@@ -73,7 +73,7 @@ export function OverlayCard({ a, className = "", size = "lg" }: { a: Article; cl
   return (
     <article className={`group relative overflow-hidden rounded-xl ${className}`}>
       <Link href={href(a)} className="absolute inset-0"><span className="sr-only">{a.title}</span></Link>
-      <Img src={a.image} alt={a.title} className="absolute inset-0 transition-transform duration-500 group-hover:scale-105" />
+      <Img src={a.image} alt={a.title} sizes="(min-width: 768px) 50vw, 100vw" className="absolute inset-0 transition-transform duration-500 group-hover:scale-105" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 p-6 sm:p-10">
         <Badge>{categoryName(a.category)}</Badge>

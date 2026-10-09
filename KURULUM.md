@@ -27,7 +27,7 @@ admin paneldə edilən dəyişiklik saytda **dərhal** (təxminən 1–2 saniyə
 1. https://imgbb.com saytında hesab açın / daxil olun.
 2. https://api.imgbb.com/ səhifəsində **Get API key** ilə açarı alın → `IMGBB_API_KEY`.
 3. Admin paneldə xəbər əlavə edərkən “Şəkil seç” düyməsi şəkli ImgBB-yə yükləyir və linki avtomatik yerinə qoyur
-   (şəkil maksimum 8 MB).
+   (şəkil cihazdan seçilir, yüklənməzdən əvvəl brauzerdə avtomatik sıxılır — ən uzun tərəf 1600px; saytda isə WebP/AVIF formatında və uyğun ölçüdə təqdim olunur, buna görə xəbərlər tez açılır).
 
 ## 3. Vercel Environment Variables
 
@@ -43,6 +43,9 @@ Vercel → layihə → **Settings → Environment Variables**. Aşağıdakılar�
 | `ADMIN_EMAIL` | Admin e-poçtu | Admin panelə giriş |
 | `ADMIN_PASSWORD` | Admin parolu | Admin panelə giriş (məxfi!) |
 | `ADMIN_SESSION_SECRET` | Təsadüfi uzun mətn (≥ 32 simvol) | Giriş sessiyasını imzalamaq (məxfi!) |
+| `RESEND_API_KEY` | Resend API açarı | Əlaqə formundan gələn mesajı `info@cenubxeber.com`-a e-poçtla göndərmək |
+| `CONTACT_TO_EMAIL` *(istəyə bağlı)* | `info@cenubxeber.com` | Mesajın düşəcəyi ünvan (boş qalsa `info@cenubxeber.com`) |
+| `CONTACT_FROM_EMAIL` *(istəyə bağlı)* | `Cənub Xəbər <noreply@cenubxeber.com>` | Göndərən ünvan (domen Resend-də təsdiqlənməlidir) |
 
 `ADMIN_SESSION_SECRET` yaratmaq üçün terminalda:
 
@@ -53,6 +56,19 @@ openssl rand -hex 32
 Nəticəni olduğu kimi dəyər xanasına yapışdırın. Hər dəyişəndən sonra **Save** edin.
 
 > Dəyişənləri əlavə etdikdən sonra **Deployments → ⋯ → Redeploy** etmək lazımdır (köhnə build yeni dəyişənləri görmür).
+
+## 3b. Əlaqə formundan gələn mesajların `info@cenubxeber.com`-a düşməsi (Resend)
+
+Əlaqə formu hər mesajı **həm admin paneldəki "Mesajlar" bölməsinə**, həm də **e-poçtla `info@cenubxeber.com`-a** göndərir.
+E-poçt göndərmək üçün Resend (pulsuz plan: ayda 3000 məktub) lazımdır:
+
+1. https://resend.com → hesab yaradın → **Domains → Add Domain** → `cenubxeber.com`.
+2. Resend-in göstərdiyi DNS qeydlərini (SPF/DKIM — adətən 3 TXT/MX qeydi) Cloudflare DNS-də əlavə edin, **Verify** edin.
+3. **API Keys → Create API Key** (Sending access) → açarı `RESEND_API_KEY` kimi Vercel-ə yazın → Redeploy.
+4. `info@cenubxeber.com` real poçt qutusu olmalıdır. Yoxdursa Cloudflare → **Email → Email Routing** ilə
+   `info@cenubxeber.com` → öz Gmail ünvanınıza yönləndirmə yaradın (pulsuzdur).
+
+Resend qurulmayıbsa mesajlar yenə də admin paneldə "Mesajlar" bölməsində görünür, sadəcə e-poçta düşmür.
 
 ## 4. Domen
 

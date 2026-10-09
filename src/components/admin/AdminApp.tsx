@@ -20,6 +20,32 @@ async function api<T = Record<string, unknown>>(url: string, init?: RequestInit)
   }
 }
 
+
+/** Şəkli yükləmədən əvvəl sıxır: ən uzun tərəf 1600px, JPEG ~82% — xəbər tez açılır, yükləmə uğurlu olur. */
+async function compressImage(file: File): Promise<File> {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const max = 1600;
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * k);
+    const h = Math.round(bmp.height * k);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/jpeg", 0.82));
+    if (!blob || (blob.size >= file.size && file.size < 4 * 1024 * 1024)) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file; // dekod olunmadı (məs. HEIC) — orijinalı göndər
+  }
+}
+
 const toLocal = (iso: string) => {
   const d = new Date(iso);
   const p = (n: number) => String(n).padStart(2, "0");
@@ -145,8 +171,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     load();
   };
 
-  const upload = async (file: File) => {
+  const upload = async (original: File) => {
     setUploading(true);
+    const file = await compressImage(original);
+    if (file.size > 4 * 1024 * 1024) {
+      setUploading(false);
+      return flash("err", "Şəkil çox böyükdür. Daha kiçik ölçülü şəkil seçin.");
+    }
     const fd = new FormData();
     fd.append("file", file);
     const r = await api<{ url: string }>("/api/admin/upload", { method: "POST", body: fd });
@@ -223,13 +254,16 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             <label className="md:col-span-2"><span className="mb-1 block text-[13px] text-[#6f6f6f]">Xəbərin mətni (abzasları boş sətirlə ayırın)</span>
               <textarea className={input} rows={12} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></label>
             <div className="md:col-span-2">
-              <span className="mb-1 block text-[13px] text-[#6f6f6f]">Şəkil</span>
+              <span className="mb-1 block text-[13px] text-[#6f6f6f]">Şəkil (cihazdan yüklənir, avtomatik sıxılır)</span>
               <div className="flex flex-wrap items-center gap-3">
                 <label className={`${btn} cursor-pointer bg-[#f4f2ee] hover:bg-[#e9e5df]`}>
-                  {uploading ? "Yüklənir…" : "Şəkil seç (ImgBB)"}
-                  <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+                  {uploading ? "Yüklənir…" : form.image ? "Şəkli dəyiş" : "Cihazdan şəkil seç"}
+                  <input type="file" accept="image/*" className="hidden" disabled={uploading}
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) upload(f); }} />
                 </label>
-                <input className={`${input} flex-1`} placeholder="və ya şəkil linki (https://...)" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
+                {form.image && !uploading && (
+                  <button type="button" onClick={() => setForm({ ...form, image: "" })} className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}>Şəkli sil</button>
+                )}
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {form.image && <img src={form.image} alt="" className="mt-3 h-40 rounded-lg object-cover" />}

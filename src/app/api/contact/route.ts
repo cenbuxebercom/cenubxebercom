@@ -1,5 +1,6 @@
 import { json, sameOrigin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { sendContactMail } from "@/lib/mail";
 
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return json({ error: "Etibarsız mənbə" }, 403);
@@ -12,9 +13,13 @@ export async function POST(req: Request) {
   if (name.length < 2 || message.length < 5 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: "Zəhmət olmasa bütün xanaları düzgün doldurun" }, 400);
   }
+
+  // həm e-poçta göndər, həm də bazaya (admin paneldəki "Mesajlar") yaz — biri alınsa kifayətdir
   const db = getDb();
-  if (!db) return json({ error: "Mesaj göndərmək hazırda mümkün deyil" }, 503);
-  const { error } = await db.from("messages").insert({ name, email, message });
-  if (error) return json({ error: "Mesaj göndərilmədi, bir az sonra yenidən cəhd edin" }, 500);
+  const [mailed, saved] = await Promise.all([
+    sendContactMail({ name, email, message }),
+    db ? db.from("messages").insert({ name, email, message }).then(({ error }) => !error) : Promise.resolve(false),
+  ]);
+  if (!mailed && !saved) return json({ error: "Mesaj göndərilmədi, bir az sonra yenidən cəhd edin" }, 500);
   return json({ ok: true });
 }
