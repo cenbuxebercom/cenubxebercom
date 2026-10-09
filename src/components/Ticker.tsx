@@ -1,7 +1,11 @@
-import { tickerHeadlines } from "@/data/news";
+import { getLatest } from "@/data/news";
+
+const fallback = ["Cənub Xəbər — Azərbaycan xəbər portalı", "Operativ", "Dəqiq", "Müstəqil"];
 
 export default function Ticker() {
-  const items = [...tickerHeadlines, ...tickerHeadlines, ...tickerHeadlines, ...tickerHeadlines];
+  const latest = getLatest().slice(0, 6).map((a) => a.title);
+  const base = latest.length ? latest : fallback;
+  const items = [...base, ...base, ...base, ...base];
   return (
     <div className="overflow-hidden bg-brand py-[18px] text-white">
       <div className="animate-marquee flex w-max whitespace-nowrap text-[17px]">
