@@ -1,25 +1,18 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { categories, categoryName } from "@/data/news";
+import { api } from "./api";
+import SourcesPanel from "./SourcesPanel";
 
 type Row = {
   id: string; slug: string; title: string; excerpt: string; body: string; category: string; image: string;
   author: string | null; featured: boolean; published: boolean; views: number; published_at: string;
+  imported?: boolean; source_name?: string | null; source_url?: string | null;
 };
 type Msg = { id: string; name: string; email: string; message: string; created_at: string };
 
 const input = "w-full rounded-lg border border-[#d9d3cc] bg-white px-3.5 py-2.5 text-[14px] outline-none transition-colors focus:border-navy";
 const btn = "rounded-lg px-4 py-2.5 text-[14px] font-medium transition-colors disabled:opacity-50";
-
-async function api<T = Record<string, unknown>>(url: string, init?: RequestInit): Promise<T & { error?: string }> {
-  try {
-    const res = await fetch(url, { ...init, headers: init?.body instanceof FormData ? undefined : { "content-type": "application/json", ...(init?.headers ?? {}) } });
-    return await res.json();
-  } catch {
-    return { error: "Şəbəkə xətası" } as T & { error?: string };
-  }
-}
-
 
 /** Şəkli yükləmədən əvvəl sıxır: ən uzun tərəf 1600px, JPEG ~82% — xəbər tez açılır, yükləmə uğurlu olur. */
 async function compressImage(file: File): Promise<File> {
@@ -106,7 +99,9 @@ const empty = {
 };
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<"list" | "edit" | "messages">("list");
+  const [tab, setTab] = useState<"list" | "edit" | "messages" | "sources">("list");
+  const [filter, setFilter] = useState<"all" | "published" | "draft" | "imported">("all");
+  const [sel, setSel] = useState<Set<string>>(new Set());
   const [rows, setRows] = useState<Row[]>([]);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [form, setForm] = useState(empty);
@@ -135,7 +130,28 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     loadMsgs();
   }, [load, loadMsgs]);
 
-  const filtered = useMemo(() => rows.filter((r) => r.title.toLowerCase().includes(q.toLowerCase())), [rows, q]);
+  const filtered = useMemo(
+    () => rows.filter((r) => {
+      if (!r.title.toLowerCase().includes(q.toLowerCase())) return false;
+      if (filter === "published") return r.published;
+      if (filter === "draft") return !r.published;
+      if (filter === "imported") return Boolean(r.imported);
+      return true;
+    }),
+    [rows, q, filter],
+  );
+  const allSelected = filtered.length > 0 && filtered.every((r) => sel.has(r.id));
+  const toggleSel = (id: string) => setSel((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const bulkDelete = async () => {
+    const ids = Array.from(sel);
+    if (!ids.length) return;
+    if (!confirm(`${ids.length} xəbər birdəfəlik silinsin? Bu əməliyyatı geri qaytarmaq olmur.`)) return;
+    const r = await api<{ deleted: number }>("/api/admin/articles/bulk", { method: "POST", body: JSON.stringify({ ids }) });
+    if (r.error) return flash("err", r.error);
+    flash("ok", `${r.deleted ?? ids.length} xəbər silindi`);
+    setSel(new Set());
+    load();
+  };
 
   const edit = (r?: Row) => {
     setForm(r ? { id: r.id, title: r.title, excerpt: r.excerpt, body: r.body, category: r.category, image: r.image, author: r.author ?? "", featured: r.featured, published: r.published, published_at: toLocal(r.published_at) } : { ...empty, published_at: toLocal(new Date().toISOString()) });
@@ -192,7 +208,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       <header className="mb-6 flex flex-wrap items-center gap-3">
         <p className="text-[20px] font-extrabold tracking-[-0.04em] text-navy">Cənub <span className="rounded bg-brand px-1.5 text-white">Xəbər</span> <span className="ml-1 text-[13px] font-medium tracking-normal text-[#6f6f6f]">admin</span></p>
         <nav className="ml-auto flex flex-wrap gap-2 text-[14px]">
-          {([["list", "Xəbərlər"], ["edit", form.id ? "Redaktə" : "Yeni xəbər"], ["messages", `Mesajlar${msgs.length ? ` (${msgs.length})` : ""}`]] as const).map(([k, l]) => (
+          {([["list", "Xəbərlər"], ["edit", form.id ? "Redaktə" : "Yeni xəbər"], ["sources", "Avto-çəkmə"], ["messages", `Mesajlar${msgs.length ? ` (${msgs.length})` : ""}`]] as const).map(([k, l]) => (
             <button key={k} onClick={() => (k === "edit" && tab !== "edit" ? edit() : setTab(k))} className={`${btn} ${tab === k ? "bg-navy text-white" : "bg-white text-ink hover:bg-[#e9e5df]"}`}>{l}</button>
           ))}
           <a href="/" target="_blank" className={`${btn} bg-white text-ink hover:bg-[#e9e5df]`}>Sayta bax ↗</a>
@@ -204,16 +220,37 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       {tab === "list" && (
         <section className="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
-          <div className="mb-4 flex gap-3">
-            <input className={input} placeholder="Xəbər axtar…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="mb-3 flex flex-wrap gap-3">
+            <input className={`${input} min-w-[200px] flex-1`} placeholder="Xəbər axtar…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <select className={`${input} w-auto`} value={filter} onChange={(e) => { setFilter(e.target.value as typeof filter); setSel(new Set()); }}>
+              <option value="all">Hamısı ({rows.length})</option>
+              <option value="published">Dərc olunmuş</option>
+              <option value="draft">Qaralamalar</option>
+              <option value="imported">Avto-çəkilmiş</option>
+            </select>
             <button onClick={() => edit()} className={`${btn} shrink-0 bg-brand text-white hover:bg-[#c43a2e]`}>+ Yeni xəbər</button>
           </div>
+          {filtered.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-3 rounded-lg bg-[#f4f2ee] px-3 py-2 text-[13px]">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={allSelected} onChange={() => setSel(allSelected ? new Set() : new Set(filtered.map((r) => r.id)))} />
+                Hamısını seç ({filtered.length})
+              </label>
+              {sel.size > 0 && (
+                <>
+                  <span className="text-[#6f6f6f]">{sel.size} seçilib</span>
+                  <button onClick={bulkDelete} className={`${btn} ml-auto bg-red-600 py-1.5 text-white hover:bg-red-700`}>Seçilmişləri sil</button>
+                </>
+              )}
+            </div>
+          )}
           {filtered.length === 0 ? (
             <p className="py-12 text-center text-[14px] text-[#6f6f6f]">{rows.length ? "Heç nə tapılmadı" : "Hələ xəbər yoxdur. \"Yeni xəbər\" düyməsi ilə ilk xəbəri əlavə edin."}</p>
           ) : (
             <ul className="divide-y divide-[#eee9e3]">
               {filtered.map((r) => (
                 <li key={r.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
+                  <input type="checkbox" className="shrink-0" checked={sel.has(r.id)} onChange={() => toggleSel(r.id)} aria-label="Seç" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {r.image ? <img src={r.image} alt="" className="h-16 w-24 shrink-0 rounded-lg object-cover" /> : <div className="h-16 w-24 shrink-0 rounded-lg bg-[#eee9e3]" />}
                   <div className="min-w-0 flex-1">
@@ -222,6 +259,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                       {categoryName(r.category)} • {new Date(r.published_at).toLocaleString("az")} • {r.views} baxış
                       {!r.published && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-amber-800">Qaralama</span>}
                       {r.featured && <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-brand">Gündəm</span>}
+                      {r.imported && <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-blue-800" title={r.source_url ?? ""}>Avto{r.source_name ? ` · ${r.source_name}` : ""}</span>}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-[13px]">
@@ -281,6 +319,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         </section>
       )}
+
+      {tab === "sources" && <SourcesPanel flash={flash} onImported={load} />}
 
       {tab === "messages" && (
         <section className="rounded-2xl bg-white p-4 shadow-sm sm:p-6">

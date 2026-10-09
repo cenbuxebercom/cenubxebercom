@@ -43,6 +43,9 @@ Vercel → layihə → **Settings → Environment Variables**. Aşağıdakılar�
 | `ADMIN_EMAIL` | Admin e-poçtu | Admin panelə giriş |
 | `ADMIN_PASSWORD` | Admin parolu | Admin panelə giriş (məxfi!) |
 | `ADMIN_SESSION_SECRET` | Təsadüfi uzun mətn (≥ 32 simvol) | Giriş sessiyasını imzalamaq (məxfi!) |
+| `ANTHROPIC_API_KEY` | Anthropic (Claude) API açarı | Başqa saytlardan çəkilən xəbərləri AI ilə yenidən yazmaq |
+| `ANTHROPIC_MODEL` *(istəyə bağlı)* | məs. `claude-opus-5-5` (defolt) | Yenidən yazan AI modeli; ucuz variant: `claude-sonnet-5-5` |
+| `CRON_SECRET` | Təsadüfi uzun mətn (`openssl rand -hex 24`) | Gündəlik avtomatik çəkməni (cron) qorumaq |
 | `RESEND_API_KEY` | Resend API açarı | Əlaqə formundan gələn mesajı `info@cenubxeber.com`-a e-poçtla göndərmək |
 | `CONTACT_TO_EMAIL` *(istəyə bağlı)* | `info@cenubxeber.com` | Mesajın düşəcəyi ünvan (boş qalsa `info@cenubxeber.com`) |
 | `CONTACT_FROM_EMAIL` *(istəyə bağlı)* | `Cənub Xəbər <noreply@cenubxeber.com>` | Göndərən ünvan (domen Resend-də təsdiqlənməlidir) |
@@ -69,6 +72,34 @@ E-poçt göndərmək üçün Resend (pulsuz plan: ayda 3000 məktub) lazımdır:
    `info@cenubxeber.com` → öz Gmail ünvanınıza yönləndirmə yaradın (pulsuzdur).
 
 Resend qurulmayıbsa mesajlar yenə də admin paneldə "Mesajlar" bölməsində görünür, sadəcə e-poçta düşmür.
+
+## 3c. Avtomatik xəbər çəkmə (başqa saytlardan + AI yenidən yazma)
+
+**Əvvəlcə SQL:** Supabase → SQL Editor → `supabase/schema.sql` faylının **bütün məzmununu yenidən** yapışdırıb Run edin
+(fayl təkrar işə salınanda təhlükəsizdir; yalnız çatışmayan sütun/cədvəlləri əlavə edir: `sources`, `import_log`,
+`articles.source_url / source_name / imported`).
+
+**Açar:** https://console.anthropic.com → API Keys → açar yaradın → Vercel-də `ANTHROPIC_API_KEY`. Redeploy.
+
+**İstifadə:** `/adminpanel` → **Avto-çəkmə**:
+1. Mənbə əlavə edin: ad + RSS linki (məs. `https://sayt.az/rss`) və ya saytın ana/bölmə səhifəsi. RSS tapılmasa sistem
+   səhifədəki xəbər linklərini özü tapmağa çalışır.
+2. **Çək** düyməsi: yeni xəbər linklərini tapır → hər birini oxuyur → AI mətni **öz sözləri ilə, fərqli cümlə quruluşu ilə**
+   yenidən yazır → başqa saytların adı/domeni və “X-ə istinadən” ifadələri silinir (“Cənub Xəbər bildirir ki…” ilə əvəz olunur) →
+   şəkil ImgBB-yə yüklənir → xəbər **qaralama** kimi saxlanılır. Yoxlayıb **Dərc et** basın
+   (mənbədə “Birbaşa dərc” seçilibsə avtomatik dərc olunur).
+3. Bot yoxlamaları: mənbə saytın `robots.txt` qadağası, mətn çox qısa/reklam, 5 sözlük eyni ardıcıllıq (oxşarlıq) — xəbər ötürülür.
+   Eyni link ikinci dəfə çəkilmir (silinmiş xəbər də geri gəlmir).
+4. **Toplu silmə:** “Xəbərlər” bölməsində süzgəc (Hamısı / Dərc olunmuş / Qaralamalar / Avto-çəkilmiş), “Hamısını seç”, “Seçilmişləri sil”.
+
+**Gündəlik avtomatik çəkmə:** `vercel.json` hər gün 03:00 UTC-də `/api/cron/import` çağırır (aktiv mənbələrdən, hər mənbə üçün
+“Maks/dəfə” qədər). `CRON_SECRET` təyin olunmalıdır — Vercel onu avtomatik `Authorization: Bearer …` başlığı ilə göndərir.
+Vercel Hobby planı yalnız gündə 1 dəfə cron icazə verir; daha tez-tez üçün Pro plan və ya xarici planlayıcı
+(cron-job.org → `GET https://www.cenubxeber.com/api/cron/import`, başlıq `Authorization: Bearer <CRON_SECRET>`) istifadə edin.
+
+> ⚠️ Hüquqi qeyd: başqa media saytlarının məzmununu çəkmək müəllif hüquqları və həmin saytların şərtləri baxımından risklidir.
+> Yalnız icazəniz olan və ya RSS ilə açıq paylaşılan mənbələrdən istifadə edin, çəkilən xəbərləri dərcdən əvvəl oxuyun.
+> Sistem mənbə linkini daxili olaraq (`source_url`) saxlayır, saytda göstərmir.
 
 ## 4. Domen
 

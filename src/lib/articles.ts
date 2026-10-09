@@ -53,3 +53,17 @@ export const getPopular = (list: Article[], n = 5) =>
   [...list].filter((a) => a.views > 0).sort((a, b) => b.views - a.views).slice(0, n);
 export const bodyParagraphs = (body: string) => body.split(/\n{2,}|\r\n{2,}/).map((p) => p.trim()).filter(Boolean);
 export const validCategory = (slug: string) => categories.some((c) => c.slug === slug);
+
+const bakuDay = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Baku" }).format(new Date(iso));
+
+/** Qırmızı xəbər barı üçün: bu günün (Bakı vaxtı ilə) xəbərləri; yoxdursa ən son 10 xəbər. */
+export async function getTickerItems(): Promise<{ title: string; slug: string }[]> {
+  "use cache";
+  cacheTag("articles");
+  cacheLife("minutes");
+  const all = await getAllArticles();
+  const today = bakuDay(new Date().toISOString());
+  let list = all.filter((a) => bakuDay(a.date) === today);
+  if (!list.length) list = all.slice(0, 10);
+  return list.slice(0, 20).map((a) => ({ title: a.title, slug: a.slug }));
+}
