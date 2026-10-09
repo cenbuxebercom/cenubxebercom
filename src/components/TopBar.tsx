@@ -1,13 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+const subscribe = () => () => {};
+const today = () =>
+  new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date());
 
 export default function TopBar() {
-  const [date, setDate] = useState("");
-  useEffect(() => {
-    setDate(
-      new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()),
-    );
-  }, []);
+  const date = useSyncExternalStore(subscribe, today, () => "");
   return (
     <div className="bg-navy text-[14px] text-white/60">
       <div className="mx-auto flex h-14 w-full max-w-[1360px] items-center justify-between px-5 sm:px-8 xl:px-0">
