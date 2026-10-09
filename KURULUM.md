@@ -71,6 +71,11 @@ E-poçt göndərmək üçün Resend (pulsuz plan: ayda 3000 məktub) lazımdır:
 4. `info@cenubxeber.com` real poçt qutusu olmalıdır. Yoxdursa Cloudflare → **Email → Email Routing** ilə
    `info@cenubxeber.com` → öz Gmail ünvanınıza yönləndirmə yaradın (pulsuzdur).
 
+**Ən asan alternativ — Gmail SMTP (domen təsdiqi və DNS lazım deyil):** Google Hesab → Təhlükəsizlik → 2 mərhələli doğrulamanı aktiv edin →
+**Tətbiq parolları (App passwords)** → ad: “Cənub Xəbər” → 16 simvollu parolu kopyalayın. Vercel-də əlavə edin:
+`SMTP_USER` = Gmail ünvanınız, `SMTP_PASS` = həmin 16 simvol, `CONTACT_TO_EMAIL` = mesajların düşəcəyi ünvan (məs. eyni Gmail). Redeploy.
+`SMTP_USER`/`SMTP_PASS` varsa Resend əvəzinə SMTP istifadə olunur.
+
 **Yoxlama və xətaların səbəbi:** admin paneldə **Mesajlar → “E-poçt testi göndər”** düyməsi test məktubu göndərir və problem varsa
 Resend-in dəqiq xəta mətnini göstərir. Hər mesajın yanında da “e-poçta göndərildi” / “e-poçta düşmədi: …” statusu görünür
 (bunun üçün `supabase/schema.sql`-i bir də işə salın). Ən çox rast gəlinən səbəblər:
