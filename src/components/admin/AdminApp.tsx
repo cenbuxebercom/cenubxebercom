@@ -9,7 +9,7 @@ type Row = {
   author: string | null; featured: boolean; published: boolean; views: number; published_at: string;
   imported?: boolean; source_name?: string | null; source_url?: string | null;
 };
-type Msg = { id: string; name: string; email: string; message: string; created_at: string };
+type Msg = { id: string; name: string; email: string; message: string; created_at: string; mail_status?: string | null };
 
 const input = "w-full rounded-lg border border-[#d9d3cc] bg-white px-3.5 py-2.5 text-[14px] outline-none transition-colors focus:border-navy";
 const btn = "rounded-lg px-4 py-2.5 text-[14px] font-medium transition-colors disabled:opacity-50";
@@ -324,6 +324,17 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       {tab === "messages" && (
         <section className="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-[#f4f2ee] px-4 py-3 text-[13px]">
+            <span className="text-[#6f6f6f]">Əlaqə formu mesajı info@cenubxeber.com e-poçtuna göndərməlidir.</span>
+            <button
+              onClick={async () => {
+                const r = await api<{ ok?: boolean; to?: string; from?: string }>("/api/admin/mail-test", { method: "POST", body: "{}" });
+                if (r.error) flash("err", `E-poçt testi alınmadı — ${r.error}`);
+                else flash("ok", `Test məktubu göndərildi → ${r.to}. Gələnlər qutusunu (və spam-ı) yoxlayın.`);
+              }}
+              className={`${btn} ml-auto bg-navy py-2 text-white hover:bg-[#1a1a80]`}
+            >E-poçt testi göndər</button>
+          </div>
           {msgs.length === 0 ? <p className="py-12 text-center text-[14px] text-[#6f6f6f]">Mesaj yoxdur.</p> : (
             <ul className="divide-y divide-[#eee9e3]">
               {msgs.map((m) => (
@@ -332,6 +343,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                     <b className="text-[15px] text-ink">{m.name}</b>
                     <a href={`mailto:${m.email}`} className="text-brand">{m.email}</a>
                     <span>• {new Date(m.created_at).toLocaleString("az")}</span>
+                    {m.mail_status && (m.mail_status === "sent"
+                      ? <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-800">e-poçta göndərildi</span>
+                      : <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-700" title={m.mail_status}>e-poçta düşmədi: {m.mail_status}</span>)}
                     <button onClick={async () => { if (!confirm("Mesaj silinsin?")) return; const r = await api(`/api/admin/messages/${m.id}`, { method: "DELETE" }); if (r.error) flash("err", r.error); else loadMsgs(); }} className="ml-auto text-red-700">Sil</button>
                   </div>
                   <p className="mt-2 whitespace-pre-wrap text-[14px] leading-[1.6]">{m.message}</p>

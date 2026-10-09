@@ -83,3 +83,9 @@ create index if not exists import_log_created_idx on public.import_log (created_
 
 alter table public.sources enable row level security;
 alter table public.import_log enable row level security;
+
+
+-- =====================================================================
+-- v3: əlaqə mesajlarının e-poçt statusu
+-- =====================================================================
+alter table public.messages add column if not exists mail_status text;  -- 'sent' və ya xəta mətni

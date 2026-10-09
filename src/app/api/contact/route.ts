@@ -14,12 +14,17 @@ export async function POST(req: Request) {
     return json({ error: "Zəhmət olmasa bütün xanaları düzgün doldurun" }, 400);
   }
 
-  // həm e-poçta göndər, həm də bazaya (admin paneldəki "Mesajlar") yaz — biri alınsa kifayətdir
+  const mail = await sendContactMail({ name, email, message });
+  const mail_status = mail.ok ? "sent" : mail.error.slice(0, 300);
+
+  // admin paneldəki "Mesajlar" üçün bazaya yaz (e-poçt statusu ilə)
   const db = getDb();
-  const [mailed, saved] = await Promise.all([
-    sendContactMail({ name, email, message }),
-    db ? db.from("messages").insert({ name, email, message }).then(({ error }) => !error) : Promise.resolve(false),
-  ]);
-  if (!mailed && !saved) return json({ error: "Mesaj göndərilmədi, bir az sonra yenidən cəhd edin" }, 500);
+  let saved = false;
+  if (db) {
+    let { error } = await db.from("messages").insert({ name, email, message, mail_status });
+    if (error) ({ error } = await db.from("messages").insert({ name, email, message })); // mail_status sütunu hələ yoxdursa
+    saved = !error;
+  }
+  if (!mail.ok && !saved) return json({ error: "Mesaj göndərilmədi, bir az sonra yenidən cəhd edin" }, 500);
   return json({ ok: true });
 }

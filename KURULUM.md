@@ -71,6 +71,18 @@ E-poçt göndərmək üçün Resend (pulsuz plan: ayda 3000 məktub) lazımdır:
 4. `info@cenubxeber.com` real poçt qutusu olmalıdır. Yoxdursa Cloudflare → **Email → Email Routing** ilə
    `info@cenubxeber.com` → öz Gmail ünvanınıza yönləndirmə yaradın (pulsuzdur).
 
+**Yoxlama və xətaların səbəbi:** admin paneldə **Mesajlar → “E-poçt testi göndər”** düyməsi test məktubu göndərir və problem varsa
+Resend-in dəqiq xəta mətnini göstərir. Hər mesajın yanında da “e-poçta göndərildi” / “e-poçta düşmədi: …” statusu görünür
+(bunun üçün `supabase/schema.sql`-i bir də işə salın). Ən çox rast gəlinən səbəblər:
+
+| Xəta | Həlli |
+|---|---|
+| `RESEND_API_KEY ... təyin edilməyib` | Dəyişəni əlavə edin və **Redeploy** edin (köhnə build yeni dəyişəni görmür) |
+| `403 ... domain is not verified` | Resend → Domains → `cenubxeber.com` **Verified** olmalıdır (DNS qeydləri Cloudflare-də “DNS only” rejimində) |
+| `422 ... Invalid from` | `CONTACT_FROM_EMAIL` formatı: `Cənub Xəbər <noreply@cenubxeber.com>` və domen təsdiqlənmiş olmalıdır |
+| `401 ... API key is invalid` | Açarı Resend-də yenidən yaradın (Sending access) |
+| Test uğurlu, amma məktub gəlmir | Spam qovluğuna baxın; `info@cenubxeber.com` real poçt qutusu/yönləndirmə olmalıdır (Cloudflare Email Routing) |
+
 Resend qurulmayıbsa mesajlar yenə də admin paneldə "Mesajlar" bölməsində görünür, sadəcə e-poçta düşmür.
 
 ## 3c. Avtomatik xəbər çəkmə (başqa saytlardan + AI yenidən yazma)
