@@ -21,3 +21,21 @@ export const YoutubeIcon = ({ className }: P) => (
 export const TelegramIcon = ({ className }: P) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}><path d="M9.8 15.6l-.4 5.6c.6 0 .9-.3 1.2-.6l2.9-2.8 6 4.4c1.1.6 1.9.3 2.2-1L23.9 3.9c.4-1.6-.6-2.2-1.6-1.8L1.2 10.2c-1.5.6-1.5 1.4-.3 1.8l5.4 1.7L18.8 6c.6-.4 1.1-.2.7.2L9.8 15.6z"/></svg>
 );
+export const TiktokIcon = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}><path d="M19.6 6.7a5.3 5.3 0 0 1-3.2-1.1 5.3 5.3 0 0 1-2-3.4h-3.3v13.2a2.8 2.8 0 1 1-2-2.7V9.3a6.1 6.1 0 1 0 5.3 6V9.1a8.6 8.6 0 0 0 5.2 1.7V7.5c-.0 0-.0-.8 0-.8z"/></svg>
+);
+export const WhatsappIcon = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}><path d="M17.5 14.4c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-1 1.2-.2.2-.4.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 2.5 1 3 .8 3.5.8.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.700 1 1-3.600-.2-.4A9.800 9.800 0 1 1 12 21.800zM12 0a12 12 0 0 0-10.300 18L0 24l6.200-1.600A12 12 0 1 0 12 0z"/></svg>
+);
+export const LinkIcon = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+);
+export const ClockIcon = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={className}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+);
+export const PhoneIcon = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.800 19.800 0 0 1-8.600-3.100 19.500 19.500 0 0 1-6-6A19.800 19.800 0 0 1 2.100 4.200 2 2 0 0 1 4.100 2h3a2 2 0 0 1 2 1.700c.1 1 .4 1.900.7 2.800a2 2 0 0 1-.5 2.100L8.100 9.900a16 16 0 0 0 6 6l1.300-1.300a2 2 0 0 1 2.100-.4c.9.3 1.800.6 2.800.7a2 2 0 0 1 1.700 2z"/></svg>
+);
+export const MailIcon = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+);

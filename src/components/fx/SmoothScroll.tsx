@@ -2,6 +2,8 @@
 import { useEffect } from "react";
 import Lenis from "lenis";
 
+type W = Window & { cxLenis?: Lenis };
+
 /** Lenis — inertial/yumşaq scroll (Framer saytlarındakı hiss). */
 export default function SmoothScroll() {
   useEffect(() => {
@@ -11,6 +13,7 @@ export default function SmoothScroll() {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
     });
+    (window as W).cxLenis = lenis;
     let id = requestAnimationFrame(function raf(time) {
       lenis.raf(time);
       id = requestAnimationFrame(raf);
@@ -18,6 +21,7 @@ export default function SmoothScroll() {
     return () => {
       cancelAnimationFrame(id);
       lenis.destroy();
+      (window as W).cxLenis = undefined;
     };
   }, []);
   return null;

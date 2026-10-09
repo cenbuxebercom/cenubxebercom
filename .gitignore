@@ -42,3 +42,4 @@ next-env.d.ts
 .claude/
 public/P/
 saytlab-main/
+!.env.example

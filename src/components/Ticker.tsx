@@ -1,14 +1,16 @@
-import { getLatest } from "@/data/news";
+import { getAllArticles } from "@/lib/articles";
 
 const fallback = ["Cənub Xəbər — Azərbaycan xəbər portalı", "Operativ", "Dəqiq", "Müstəqil"];
 
-export default function Ticker() {
-  const latest = getLatest().slice(0, 6).map((a) => a.title);
+export default async function Ticker() {
+  const latest = (await getAllArticles()).slice(0, 8).map((a) => a.title);
   const base = latest.length ? latest : fallback;
   const items = [...base, ...base, ...base, ...base];
+  // sabit sürət: hər element üçün ~8 saniyə (≈55px/s)
+  const duration = `${items.length * 8}s`;
   return (
     <div className="overflow-hidden bg-brand py-3 text-white">
-      <div className="animate-marquee flex w-max whitespace-nowrap text-[15px]">
+      <div className="animate-marquee flex w-max whitespace-nowrap text-[14px]" style={{ animationDuration: duration }}>
         {[0, 1].map((k) => (
           <div key={k} className="flex shrink-0">
             {items.map((t, i) => (

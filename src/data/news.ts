@@ -1,20 +1,3 @@
-import { testArticles } from "./test-articles";
-
-export type Article = {
-  slug: string;
-  title: string;
-  category: string; // kateqoriya slug-ı (aşağıdakı `categories`-dən)
-  date: string; // ISO
-  image: string;
-  excerpt: string;
-  body?: string[];
-  author?: string;
-  featured?: boolean; // "Gündəm" bölməsi
-};
-
-export const SITE_NAME = "Cənub Xəbər";
-export const SITE_EMAIL = "info@cenubxeber.com";
-
 export const categories = [
   { name: "Siyasət", slug: "siyaset" },
   { name: "İqtisadiyyat", slug: "iqtisadiyyat" },
@@ -27,16 +10,7 @@ export const categories = [
   { name: "Səhiyyə", slug: "seheyye" },
 ];
 
-/** Xəbərlər burada saxlanılır. `...testArticles` test xəbərləridir — real xəbər əlavə etdikdən sonra silin. */
-export const articles: Article[] = [...testArticles];
-
-const sorted = () => [...articles].sort((a, b) => +new Date(b.date) - +new Date(a.date));
-
 export const categoryName = (slug: string) => categories.find((c) => c.slug === slug)?.name ?? slug;
-export const getArticle = (slug: string) => articles.find((a) => a.slug === slug);
-export const getLatest = () => sorted();
-export const getFeatured = () => sorted().filter((a) => a.featured);
-export const byCategory = (slug: string) => sorted().filter((a) => a.category === slug);
 
 const fmt = (iso: string, o: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat("az", { timeZone: "Asia/Baku", ...o }).format(new Date(iso));

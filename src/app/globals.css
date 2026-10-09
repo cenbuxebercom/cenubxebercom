@@ -33,7 +33,7 @@ html.lenis, html.lenis body { height: auto; }
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
-.animate-marquee { animation: marquee 40s linear infinite; }
+.animate-marquee { animation: marquee 120s linear infinite; }
 
 /* ---------- Floating 3D icons ---------- */
 @keyframes float1 { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-14px) rotate(-3deg); } }
@@ -42,6 +42,24 @@ html.lenis, html.lenis body { height: auto; }
 .float-1 { animation: float1 5s ease-in-out infinite; }
 .float-2 { animation: float2 6s ease-in-out infinite; }
 .float-3 { animation: float3 4.5s ease-in-out infinite; }
+
+
+/* ---------- Custom cursor ---------- */
+html.cursor-custom, html.cursor-custom * { cursor: none !important; }
+.cursor-dot, .cursor-ring {
+  position: fixed; top: 0; left: 0; z-index: 9999;
+  border-radius: 50%; pointer-events: none; translate: -50% -50%; opacity: 0;
+  transition: opacity 0.25s, width 0.2s, height 0.2s, background-color 0.2s;
+}
+.cursor-custom .cursor-dot, .cursor-custom .cursor-ring { opacity: 1; }
+.cursor-dot { width: 7px; height: 7px; background: var(--red); }
+.cursor-ring { width: 30px; height: 30px; border: 1.5px solid rgba(220, 68, 55, 0.5); background: rgba(220, 68, 55, 0.04); }
+.cursor-custom.cursor-hot .cursor-ring {
+  width: 46px; height: 46px; border-color: var(--red); background: rgba(220, 68, 55, 0.1);
+  box-shadow: 0 0 12px 2px rgba(220, 68, 55, 0.35), 0 0 24px 6px rgba(220, 68, 55, 0.2), inset 0 0 10px rgba(220, 68, 55, 0.25);
+}
+.cursor-custom.cursor-hot .cursor-dot { background: #ff8f84; }
+.cursor-custom.cursor-hidden .cursor-dot, .cursor-custom.cursor-hidden .cursor-ring { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee, .float-1, .float-2, .float-3 { animation: none; }

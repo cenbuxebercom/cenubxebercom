@@ -2,7 +2,8 @@ import Link from "next/link";
 import Img from "./Img";
 import Tilt from "./fx/Tilt";
 import { Badge, Dot } from "./ui";
-import { type Article, categoryName, fmtLong, fmtShort } from "@/data/news";
+import type { Article } from "@/lib/articles";
+import { categoryName, fmtLong, fmtShort } from "@/data/news";
 
 const href = (a: Article) => `/xeber/${a.slug}`;
 

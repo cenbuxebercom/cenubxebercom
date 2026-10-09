@@ -1,35 +1,23 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import TopBar from "@/components/TopBar";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import SmoothScroll from "@/components/fx/SmoothScroll";
-import ScrollProgress from "@/components/fx/ScrollProgress";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin", "latin-ext"] });
 
 export const metadata: Metadata = {
-  title: { default: "Cənub Xəbər", template: "%s — Cənub Xəbər" },
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_NAME, template: `%s — ${SITE_NAME}` },
   description: "Cənub Xəbər — Azərbaycan xəbər portalı: gündəm, son xəbərlər və kateqoriyalar üzrə operativ məlumat.",
-  applicationName: "Cənub Xəbər",
-  openGraph: { siteName: "Cənub Xəbər", locale: "az_AZ", type: "website" },
+  applicationName: SITE_NAME,
+  openGraph: { siteName: SITE_NAME, locale: "az_AZ", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="az" className={`${inter.variable} antialiased`}>
-      <body className="flex min-h-screen flex-col">
-        <SmoothScroll />
-        <ScrollProgress />
-        <TopBar />
-        <Suspense fallback={<div className="h-[61px] bg-navy" />}>
-          <Header />
-        </Suspense>
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </body>
+      <body className="flex min-h-screen flex-col">{children}</body>
     </html>
   );
 }

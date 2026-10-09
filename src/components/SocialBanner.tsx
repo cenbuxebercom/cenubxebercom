@@ -1,4 +1,4 @@
-import { LinkedinIcon, XIcon } from "./icons";
+import { FacebookIcon, InstagramIcon, TiktokIcon, YoutubeIcon } from "./icons";
 import Reveal from "./fx/Reveal";
 
 export default function SocialBanner() {
@@ -13,15 +13,18 @@ export default function SocialBanner() {
             Harada olursunuz olun məlumatlı qalın — oxucu və izləyici icmamıza qoşulun.
           </p>
         </div>
-        <div className="pointer-events-none absolute -bottom-10 right-4 hidden h-[260px] w-[420px] md:block lg:right-24">
-          <div className="float-1 absolute bottom-0 left-0 flex h-[160px] w-[160px] items-center justify-center rounded-[40px] bg-[#1d63e0] text-white shadow-2xl">
-            <LinkedinIcon className="h-20 w-20" />
+        <div className="pointer-events-none absolute -bottom-10 right-4 hidden h-[260px] w-[440px] md:block lg:right-24">
+          <div className="float-1 absolute bottom-0 left-0 flex h-[140px] w-[140px] items-center justify-center rounded-[36px] bg-[#1877f2] text-white shadow-2xl">
+            <FacebookIcon className="h-16 w-16" />
           </div>
-          <div className="float-2 absolute left-[110px] top-0 flex h-[200px] w-[200px] items-center justify-center rounded-[50px] bg-[#3a3a3c] text-white shadow-2xl">
-            <XIcon className="h-24 w-24" />
+          <div className="float-2 absolute left-[100px] top-0 flex h-[170px] w-[170px] items-center justify-center rounded-[44px] bg-gradient-to-tr from-[#feda75] via-[#d62976] to-[#4f5bd5] text-white shadow-2xl">
+            <InstagramIcon className="h-20 w-20" />
           </div>
-          <div className="float-3 absolute bottom-0 right-0 flex h-[170px] w-[170px] items-center justify-center rounded-full bg-[#ee4b1f] text-white shadow-2xl">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-20 w-20"><circle cx="12" cy="14" r="6.5"/><circle cx="19" cy="4" r="2"/><circle cx="5" cy="9" r="2.2"/><circle cx="19" cy="9" r="2.2"/></svg>
+          <div className="float-3 absolute bottom-2 left-[230px] flex h-[120px] w-[150px] items-center justify-center rounded-[30px] bg-[#ff0000] text-white shadow-2xl">
+            <YoutubeIcon className="h-16 w-16" />
+          </div>
+          <div className="float-1 absolute right-0 top-4 flex h-[110px] w-[110px] items-center justify-center rounded-full bg-[#111] text-white shadow-2xl">
+            <TiktokIcon className="h-12 w-12" />
           </div>
         </div>
       </section>
