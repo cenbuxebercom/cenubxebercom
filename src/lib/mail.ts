@@ -96,33 +96,3 @@ export function sendContactMail(m: { name: string; email: string; message: strin
     text: `Saytın əlaqə formundan yeni mesaj:\n\nAd: ${m.name}\nE-poçt: ${m.email}\n\nMesaj:\n${m.message}\n`,
   });
 }
-
-/** Resend-in verdiyi məktub statusu (delivered / bounced / delivery_delayed ...). */
-async function resendStatus(id: string): Promise<string | null> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
-  for (let i = 0; i < 4; i++) {
-    await new Promise((r) => setTimeout(r, 2500));
-    try {
-      const res = await fetch(`https://api.resend.com/emails/${id}`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) });
-      const d = await res.json().catch(() => null);
-      const ev: string | undefined = d?.last_event;
-      if (ev && ev !== "sent" && ev !== "queued") return ev;
-      if (i === 3) return ev ?? null;
-    } catch { /* növbəti cəhd */ }
-  }
-  return null;
-}
-
-/** Admin paneldən "E-poçt testi" üçün. */
-export async function sendTestMail(): Promise<(MailResult & { to: string; from: string; status?: string | null })> {
-  const { to, from } = target();
-  const r = await send({
-    from,
-    to: [to],
-    subject: "Cənub Xəbər — test məktubu",
-    text: "Bu, admin paneldən göndərilən test məktubudur. Bunu aldınızsa, əlaqə formu e-poçt göndərməyə hazırdır.",
-  });
-  if (r.ok && r.via === "resend" && r.id) return { ...r, to, from, status: await resendStatus(r.id) };
-  return { ...r, to, from: r.ok && r.via === "smtp" ? String(process.env.SMTP_USER) : from };
-}

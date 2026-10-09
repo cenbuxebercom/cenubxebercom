@@ -136,9 +136,18 @@ export default async function Home() {
         <SocialBanner />
       </Container>
 
+      {health.length > 0 && (
+        <Container className="mt-16">
+          <SectionHeading title="Səhiyyə" href="/kateqoriya/seheyye" />
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {health.map((a, i) => <Reveal key={a.slug} delay={i * 0.05}><ImageCard a={a} ratio="aspect-[1.4/1]" /></Reveal>)}
+          </div>
+        </Container>
+      )}
+
       {/* idman və mədəniyyət */}
       {dark.length > 0 && (
-        <section className="mt-16 bg-navy py-14">
+        <section className="-mb-24 mt-16 bg-navy py-14">
           <Container>
             <SectionHeading title="İdman və Mədəniyyət" href="/kateqoriya/idman" dark square={false} />
             <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -153,15 +162,6 @@ export default async function Home() {
             )}
           </Container>
         </section>
-      )}
-
-      {health.length > 0 && (
-        <Container className="mt-16">
-          <SectionHeading title="Səhiyyə" href="/kateqoriya/seheyye" />
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {health.map((a, i) => <Reveal key={a.slug} delay={i * 0.05}><ImageCard a={a} ratio="aspect-[1.4/1]" /></Reveal>)}
-          </div>
-        </Container>
       )}
     </>
   );

@@ -60,8 +60,8 @@ async function Content({ params }: { params: Promise<{ slug: string }> }) {
             {hasImage && <p className="mt-1.5 text-right text-[12px] text-[#8a8a8a]">Video</p>}
           </div>
         )}
-        {a.excerpt && <p className="mt-6 text-[16px] font-medium leading-[1.7] text-[#222]">{a.excerpt}</p>}
-        <div className="mt-5 space-y-4 text-[15px] leading-[1.85] text-[#333]">
+        {a.excerpt && <p className="mt-6 border-l-4 border-brand bg-[#fdf6f1] px-4 py-3 text-[15px] font-medium leading-[1.7] text-[#222] sm:text-justify">{a.excerpt}</p>}
+        <div className="mt-6 space-y-5 text-[15px] leading-[1.9] text-[#2b2b2b] [&_p]:[overflow-wrap:anywhere] [&_p]:[text-wrap:pretty] sm:[&_p]:text-justify sm:[&_p]:hyphens-auto">
           {paras.map((p, i) => <p key={i}>{p}</p>)}
         </div>
         <ShareBar url={`${SITE_URL}/xeber/${a.slug}`} title={a.title} />

@@ -231,19 +231,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           {([["list", "Xəbərlər"], ["edit", form.id ? "Redaktə" : "Yeni xəbər"], ["sources", "Avto-çəkmə"], ["socials", "Sosial şəbəkələr"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => (k === "edit" && tab !== "edit" ? edit() : setTab(k))} className={`${btn} ${tab === k ? "bg-navy text-white" : "bg-white text-ink hover:bg-[#e9e5df]"}`}>{l}</button>
           ))}
-          <button
-            onClick={async () => {
-              flash("ok", "Test məktubu göndərilir… (təxminən 10 saniyə)");
-              const r = await api<{ to?: string; via?: string; status?: string | null; from?: string }>("/api/admin/mail-test", { method: "POST", body: "{}" });
-              if (r.error) return flash("err", `E-poçt testi alınmadı — ${r.error}`);
-              const st = r.status;
-              if (r.via === "smtp") flash("ok", `SMTP ilə göndərildi (${r.from} → ${r.to}). Gələnlər qutusunu və spam-ı yoxlayın.`);
-              else if (st === "delivered") flash("ok", `Resend: çatdırıldı → ${r.to}. Zoho qəbul etdi; gələnlər qutusunda yoxdursa SPAM/Karantin qovluğuna baxın.`);
-              else if (st === "bounced" || st === "failed" || st === "suppressed" || st === "complained") flash("err", `Resend: məktub çatmadı (${st}). Zoho/alıcı rədd etdi — KURULUM.md-dəki Zoho SMTP variantına keçin.`);
-              else flash("ok", `Resend qəbul etdi (status: ${st ?? "gözlənilir"}) → ${r.to}. Resend → Emails səhifəsində statusa baxın.`);
-            }}
-            className={`${btn} bg-white text-ink hover:bg-[#e9e5df]`}
-          >E-poçt testi</button>
           <a href="/" target="_blank" className={`${btn} bg-white text-ink hover:bg-[#e9e5df]`}>Sayta bax ↗</a>
           <button onClick={async () => { await api("/api/admin/logout", { method: "POST" }); onLogout(); }} className={`${btn} bg-white text-brand hover:bg-[#fdf3ee]`}>Çıxış</button>
         </nav>
