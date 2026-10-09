@@ -127,6 +127,34 @@ function parseFeed(xml: string, base: string): { items: Candidate[]; channelHost
   return { items: out, channelHost };
 }
 
+/** sitemap.xml / Google News sitemap / sitemap index → ən yeni xəbər linkləri. */
+async function parseSitemap(xml: string, base: string, depth = 0): Promise<Candidate[]> {
+  const p = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_", textNodeName: "#text", processEntities: true });
+  const doc = p.parse(xml);
+  if (doc?.sitemapindex && depth < 1) {
+    const locs = arr(doc.sitemapindex.sitemap as { loc?: unknown }[]).map((x) => txt(x.loc)).filter(Boolean);
+    const pref = (u: string) => (/news|latest|recent|today|last|son|yeni/i.test(u) ? 0 : /archive|categor|tag|page|author/i.test(u) ? 2 : 1);
+    const pick = locs.sort((a, b) => pref(a) - pref(b)).slice(0, 2);
+    const out: Candidate[] = [];
+    for (const u of pick) {
+      try {
+        const f = await fetchText(new URL(u, base).toString(), 10000);
+        out.push(...(await parseSitemap(f.text, f.finalUrl, depth + 1)));
+      } catch { /* növbəti */ }
+    }
+    return out;
+  }
+  const items: (Candidate & { t: number })[] = [];
+  for (const u of arr(doc?.urlset?.url) as Record<string, unknown>[]) {
+    const loc = txt(u.loc);
+    if (!loc) continue;
+    const news = (u["news:news"] ?? {}) as Record<string, unknown>;
+    const date = txt(news["news:publication_date"]) || txt(u.lastmod) || undefined;
+    items.push({ url: new URL(loc, base).toString(), title: txt(news["news:title"]), date, t: date ? Date.parse(date) || 0 : 0 });
+  }
+  return items.sort((a, b) => b.t - a.t).map(({ t: _t, ...c }) => (void _t, c));
+}
+
 function heuristicLinks(html: string, base: string): Candidate[] {
   const $ = cheerio.load(html);
   const seen = new Set<string>();
@@ -150,7 +178,7 @@ function heuristicLinks(html: string, base: string): Candidate[] {
   return out.slice(0, 40);
 }
 
-const FEED_PATHS = ["/feed", "/rss", "/rss.xml", "/feed.xml", "/atom.xml", "/index.xml", "/feed/rss", "/rss/news"];
+const FEED_PATHS = ["/feed", "/rss", "/rss.xml", "/feed.xml", "/atom.xml", "/index.xml", "/feed/rss", "/rss/news", "/sitemap-latest.xml", "/sitemap-news.xml", "/news-sitemap.xml", "/sitemap_news.xml", "/sitemap.xml"];
 
 export async function discover(source: { url: string }): Promise<Candidate[]> {
   let text = "", finalUrl = source.url, contentType = "";
@@ -162,7 +190,9 @@ export async function discover(source: { url: string }): Promise<Candidate[]> {
     for (const p of FEED_PATHS) {
       try {
         const f = await fetchText(origin + p, 8000);
-        const parsed = parseFeed(f.text, f.finalUrl);
+        const parsed = /<(urlset|sitemapindex)/i.test(f.text.slice(0, 800))
+          ? { items: await parseSitemap(f.text, f.finalUrl), channelHost: undefined }
+          : parseFeed(f.text, f.finalUrl);
         if (parsed.items.length) return finishDiscover(parsed.items, f.finalUrl, parsed.channelHost);
       } catch { /* növbəti */ }
     }
@@ -171,7 +201,9 @@ export async function discover(source: { url: string }): Promise<Candidate[]> {
   const head = text.slice(0, 500).toLowerCase();
   let items: Candidate[];
   let channelHost: string | undefined;
-  if (/xml/.test(contentType) || head.includes("<rss") || head.includes("<feed") || head.includes("<rdf")) {
+  if (head.includes("<urlset") || head.includes("<sitemapindex")) {
+    items = await parseSitemap(text, finalUrl);
+  } else if (/xml/.test(contentType) || head.includes("<rss") || head.includes("<feed") || head.includes("<rdf")) {
     ({ items, channelHost } = parseFeed(text, finalUrl));
   } else {
     const $ = cheerio.load(text);
@@ -182,6 +214,16 @@ export async function discover(source: { url: string }): Promise<Candidate[]> {
         const f = await fetchText(new URL(feedHref, finalUrl).toString());
         ({ items, channelHost } = parseFeed(f.text, f.finalUrl));
       } catch { /* feed oxunmadı — səhifə linklərinə keç */ }
+    }
+    if (!items.length) {
+      const origin = new URL(finalUrl).origin;
+      for (const p of ["/sitemap-latest.xml", "/sitemap-news.xml", "/news-sitemap.xml", "/sitemap.xml"]) {
+        try {
+          const f = await fetchText(origin + p, 8000);
+          items = await parseSitemap(f.text, f.finalUrl);
+          if (items.length) break;
+        } catch { /* növbəti */ }
+      }
     }
     if (!items.length) items = heuristicLinks(text, finalUrl);
   }
