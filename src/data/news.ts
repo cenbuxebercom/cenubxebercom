@@ -18,4 +18,4 @@ const fmt = (iso: string, o: Intl.DateTimeFormatOptions) =>
 export const fmtLong = (iso: string) => fmt(iso, { day: "numeric", month: "long", year: "numeric" });
 export const fmtShort = (iso: string) => fmt(iso, { day: "numeric", month: "short", year: "numeric" });
 export const fmtTime = (iso: string) =>
-  fmt(iso, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  `${fmtLong(iso)}, ${fmt(iso, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;

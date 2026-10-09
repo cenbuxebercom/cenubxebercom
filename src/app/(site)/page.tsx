@@ -66,7 +66,7 @@ export default async function Home() {
         <div className="grid gap-8 lg:grid-cols-[1fr_1px_460px] lg:gap-9">
           <div>
             <article>
-              <Link href={`/xeber/${hero.slug}`} className="group relative block aspect-[1.7/1] overflow-hidden rounded-xl">
+              <Link href={`/xeber/${hero.slug}`} className="group relative block aspect-[4/3] overflow-hidden rounded-xl sm:aspect-[1.7/1]">
                 <Parallax className="absolute inset-0" amount={12}><Img src={hero.image} alt={hero.title} priority sizes="(min-width: 1024px) 60vw, 100vw" /></Parallax>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">

@@ -23,8 +23,8 @@ export default function Reveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, filter: "blur(2px)", scale: 0.985, ...from[dir] }}
-      whileInView={{ opacity: 1, filter: "blur(0px)", scale: 1, x: 0, y: 0 }}
+      initial={{ opacity: 0, scale: 0.985, ...from[dir] }}
+      whileInView={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       viewport={{ once, margin: "0px 0px -8% 0px" }}
       transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay }}
     >

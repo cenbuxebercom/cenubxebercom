@@ -44,16 +44,18 @@ export default function Footer() {
                 ))}
               </div>
             </Reveal>
-            {[colA, colB].map((col, ci) => (
-              <Reveal key={ci} delay={0.08 * (ci + 1)} className="lg:min-w-[150px]">
-                <h4 className="text-[16px] font-semibold">Səhifələr</h4>
-                <ul className="mt-5 space-y-3 text-[14px] text-white/60">
-                  {col.map((l) => (
-                    <li key={l.label}><Link href={l.href} className="transition-colors hover:text-white">{l.label}</Link></li>
-                  ))}
-                </ul>
-              </Reveal>
-            ))}
+            <div className="grid grid-cols-2 gap-8 lg:contents">
+              {[colA, colB].map((col, ci) => (
+                <Reveal key={ci} delay={0.08 * (ci + 1)} className="lg:min-w-[150px]">
+                  <h4 className="text-[16px] font-semibold">{ci === 0 ? "Səhifələr" : "Məlumat"}</h4>
+                  <ul className="mt-5 space-y-3 text-[14px] text-white/60">
+                    {col.map((l) => (
+                      <li key={l.label}><Link href={l.href} className="transition-colors hover:text-white">{l.label}</Link></li>
+                    ))}
+                  </ul>
+                </Reveal>
+              ))}
+            </div>
             <Reveal delay={0.24}>
               <h4 className="text-[16px] font-semibold">Əlaqə</h4>
               <ul className="mt-5 space-y-3 text-[14px] text-white/60">
