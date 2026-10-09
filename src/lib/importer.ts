@@ -90,7 +90,7 @@ export async function processItem(source: Source, cand: Candidate): Promise<Proc
 
     const { text: html, finalUrl } = await fetchText(url);
     const ex = extractArticle(html, finalUrl);
-    if (ex.text.length < 500) {
+    if (ex.text.length < 250) {
       await log(url, source.id, "skipped", { error: "mətn qısadır" });
       return { status: "skipped", reason: "Mətn çox qısadır və ya oxunmadı" };
     }
@@ -120,7 +120,7 @@ export async function processItem(source: Source, cand: Candidate): Promise<Proc
     const title = scrubOutlet(draft.title, outletNames).slice(0, 200);
     const excerpt = scrubOutlet(draft.excerpt, outletNames).slice(0, 500);
     const body = scrubOutlet(draft.body, outletNames);
-    if (title.length < 5 || body.length < 200) throw new Error("AI boş/qısa mətn qaytardı");
+    if (title.length < 5 || body.length < 120) throw new Error("AI boş/qısa mətn qaytardı");
 
     // şəkil
     let image = "";
