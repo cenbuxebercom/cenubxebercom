@@ -18,5 +18,5 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET GitHub Secrets-də təyin edilməyib"; exit 1; fi
+          if [ -z "$CRON_SECRET" ]; then echo "::warning::CRON_SECRET GitHub Secrets-də təyin edilməyib — avto-çəkmə işləmir (KURULUM.md → 3c)"; exit 0; fi
           curl -sS -m 290 -H "Authorization: Bearer $CRON_SECRET" "https://www.cenubxeber.com/api/cron/import" -w "\nHTTP %{http_code}\n"
