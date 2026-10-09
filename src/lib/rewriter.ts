@@ -81,8 +81,15 @@ async function geminiRewrite(parts: unknown[]): Promise<unknown> {
       signal: AbortSignal.timeout(100_000),
     });
     if (res.status === 429 || res.status === 503) {
-      lastErr = res.status === 429 ? "Gemini pulsuz limiti doldu (dəqiqəlik/günlük). Bir az gözləyib yenidən cəhd edin" : "Gemini müvəqqəti məşğuldur";
-      await sleep(8000 * (attempt + 1));
+      const eb = await res.json().catch(() => null);
+      const detail: string = String(eb?.error?.message ?? "").replace(/\s+/g, " ").slice(0, 220);
+      const daily = /per ?day|daily|PerDay/i.test(JSON.stringify(eb ?? {}));
+      lastErr = res.status === 429
+        ? `Gemini pulsuz limiti doldu${daily ? " (GÜNLÜK limit — sabaha qədər gözləyin və ya Google AI Studio-da Cloud Billing aktiv edin)" : " (dəqiqəlik limit)"}: ${detail}`
+        : `Gemini müvəqqəti məşğuldur (503): ${detail}`;
+      if (daily) break; // günlük limit dolub — təkrar sınamağın mənası yoxdur
+      const m = /retry in ([\d.]+)s/i.exec(detail);
+      await sleep(Math.min(25_000, (m ? Math.ceil(Number(m[1])) * 1000 : 8000 * (attempt + 1)) + 500));
       continue;
     }
     const data = await res.json().catch(() => null);
