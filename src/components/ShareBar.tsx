@@ -20,7 +20,7 @@ export default function ShareBar({ url, title }: { url: string; title: string })
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 3500); };
   const copy = async (m = "Link kopyalandı") => {
     try { await navigator.clipboard.writeText(url); flash(m); }
-    catch { window.prompt("Linki kopyalayın:", url); }
+    catch { flash(`Linki əl ilə kopyalayın: ${url}`); }
   };
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
+import { useConfirm } from "./useConfirm";
 
 type Source = { id: string; name: string; url: string; active: boolean; last_run_at: string | null };
 type Stats = { at: string; done: number; skipped: number; failed: number; published: number; seconds: number; errors: string[] };
@@ -14,6 +15,7 @@ export default function SourcesPanel({ flash, onImported }: { flash: (t: "ok" | 
   const [auto, setAuto] = useState<Auto | null>(null);
   const [form, setForm] = useState({ name: "", url: "" });
   const [running, setRunning] = useState<string | null>(null);
+  const [ask, confirmDialog] = useConfirm();
 
   const load = useCallback(async () => {
     const [s, a] = await Promise.all([api<{ sources: Source[] }>("/api/admin/sources"), api<Auto>("/api/admin/auto")]);
@@ -42,7 +44,7 @@ export default function SourcesPanel({ flash, onImported }: { flash: (t: "ok" | 
     load();
   };
   const remove = async (s: Source) => {
-    if (!confirm(`"${s.name}" saytı siyahıdan silinsin? (Əvvəl çəkilmiş xəbərlər qalır.)`)) return;
+    if (!(await ask(`"${s.name}" saytı siyahıdan silinsin? (Əvvəl çəkilmiş xəbərlər qalır.)`))) return;
     const r = await api(`/api/admin/sources/${s.id}`, { method: "DELETE" });
     if (r.error) return flash("err", r.error);
     load();
@@ -67,6 +69,7 @@ export default function SourcesPanel({ flash, onImported }: { flash: (t: "ok" | 
   const st = auto?.status;
   return (
     <div className="space-y-5">
+      {confirmDialog}
       <section className="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-[18px] font-semibold">Avtomatik xəbər çəkmə</h2>

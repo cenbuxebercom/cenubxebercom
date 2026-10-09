@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { categories, categoryName } from "@/data/news";
 import { api } from "./api";
+import { useConfirm } from "./useConfirm";
 import SourcesPanel from "./SourcesPanel";
 import SocialsPanel from "./SocialsPanel";
 
@@ -107,6 +108,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [q, setQ] = useState("");
   const [note, setNote] = useState<{ t: "ok" | "err"; m: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [ask, confirmDialog] = useConfirm();
   const [uploading, setUploading] = useState(false);
   const [ytBusy, setYtBusy] = useState(false);
 
@@ -140,7 +142,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const bulkDelete = async () => {
     const ids = Array.from(sel);
     if (!ids.length) return;
-    if (!confirm(`${ids.length} xəbər birdəfəlik silinsin? Bu əməliyyatı geri qaytarmaq olmur.`)) return;
+    if (!(await ask(`${ids.length} xəbər birdəfəlik silinsin? Bu əməliyyatı geri qaytarmaq olmur.`))) return;
     const r = await api<{ deleted: number }>("/api/admin/articles/bulk", { method: "POST", body: JSON.stringify({ ids }) });
     if (r.error) return flash("err", r.error);
     flash("ok", `${r.deleted ?? ids.length} xəbər silindi`);
@@ -166,7 +168,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   };
 
   const remove = async (r: Row) => {
-    if (!confirm(`"${r.title}" xəbəri silinsin?`)) return;
+    if (!(await ask(`"${r.title}" xəbəri silinsin?`))) return;
     const res = await api(`/api/admin/articles/${r.id}`, { method: "DELETE" });
     if (res.error) return flash("err", res.error);
     flash("ok", "Silindi");
@@ -222,6 +224,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6" data-lenis-prevent>
+      {confirmDialog}
       <header className="mb-6 flex flex-wrap items-center gap-3">
         <p className="text-[20px] font-extrabold tracking-[-0.04em] text-navy">Cənub <span className="rounded bg-brand px-1.5 text-white">Xəbər</span> <span className="ml-1 text-[13px] font-medium tracking-normal text-[#6f6f6f]">admin</span></p>
         <nav className="ml-auto flex flex-wrap gap-2 text-[14px]">
