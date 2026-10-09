@@ -89,7 +89,7 @@ Resend-in dəqiq xəta mətnini göstərir. Hər mesajın yanında da “e-poçt
 | `401 ... API key is invalid` | Açarı Resend-də yenidən yaradın (Sending access) |
 | Test uğurlu, amma məktub gəlmir | Spam qovluğuna baxın; `info@cenubxeber.com` real poçt qutusu/yönləndirmə olmalıdır (Cloudflare Email Routing) |
 
-Resend qurulmayıbsa mesajlar yenə də admin paneldə "Mesajlar" bölməsində görünür, sadəcə e-poçta düşmür.
+Resend (və ya SMTP) qurulmayıbsa, form istifadəçiyə “Mesaj göndərilmədi” xətası göstərir.
 
 ## 3c. Avtomatik xəbər çəkmə (başqa saytlardan + AI yenidən yazma)
 
