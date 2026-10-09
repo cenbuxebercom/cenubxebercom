@@ -1,5 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { getDb } from "./db";
+import { parseYoutubeId, youtubeThumb, youtubeWatchUrl } from "./youtube";
 import { categories } from "@/data/news";
 
 export type Article = {
@@ -14,17 +15,22 @@ export type Article = {
   featured: boolean;
   views: number;
   date: string; // published_at (ISO)
+  video?: string | null; // YouTube linki
 };
 
 type Row = {
   id: string; slug: string; title: string; excerpt: string; body: string; category: string;
-  image: string; author: string | null; featured: boolean; views: number; published_at: string;
+  image: string; author: string | null; featured: boolean; views: number; published_at: string; video_url?: string | null;
 };
 
-export const toArticle = (r: Row): Article => ({
-  id: r.id, slug: r.slug, title: r.title, excerpt: r.excerpt, body: r.body, category: r.category,
-  image: r.image, author: r.author, featured: r.featured, views: r.views, date: r.published_at,
-});
+export const toArticle = (r: Row): Article => {
+  const vid = r.video_url ? parseYoutubeId(r.video_url) : null;
+  return {
+    id: r.id, slug: r.slug, title: r.title, excerpt: r.excerpt, body: r.body, category: r.category,
+    image: r.image || (vid ? youtubeThumb(vid) : ""), author: r.author, featured: r.featured, views: r.views, date: r.published_at,
+    video: vid ? youtubeWatchUrl(vid) : null,
+  };
+};
 
 /** Dərc olunmuş bütün xəbərlər (keşlənir; admin paneldə dəyişiklik olanda "articles" tag-ı ilə təzələnir). */
 export async function getAllArticles(): Promise<Article[]> {
@@ -35,7 +41,7 @@ export async function getAllArticles(): Promise<Article[]> {
   if (!db) return [];
   const { data, error } = await db
     .from("articles")
-    .select("id,slug,title,excerpt,body,category,image,author,featured,views,published_at")
+    .select("*")
     .eq("published", true)
     .lte("published_at", new Date().toISOString())
     .order("published_at", { ascending: false })

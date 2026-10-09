@@ -9,13 +9,13 @@ export function parseSource(raw: unknown): { ok: true; data: Record<string, unkn
   if (name.length < 2) return { ok: false, error: "Mənbənin adını yazın" };
   try { assertPublicHttpUrl(url); } catch (e) { return { ok: false, error: e instanceof Error ? e.message : "Yanlış link" }; }
   const category = typeof r.category === "string" && validCategory(r.category) ? r.category : null;
-  const max = Math.min(20, Math.max(1, Math.floor(Number(r.max_per_run) || 5)));
+  const max = Math.min(30, Math.max(1, Math.floor(Number(r.max_per_run) || 10)));
   return {
     ok: true,
     data: {
       name, url, kind: r.kind === "html" ? "html" : "rss", category,
       active: r.active === undefined ? true : Boolean(r.active),
-      auto_publish: Boolean(r.auto_publish),
+      auto_publish: r.auto_publish === undefined ? true : Boolean(r.auto_publish),
       max_per_run: max,
     },
   };

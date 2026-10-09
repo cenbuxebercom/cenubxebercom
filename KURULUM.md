@@ -91,37 +91,55 @@ Resend-in dəqiq xəta mətnini göstərir. Hər mesajın yanında da “e-poçt
 
 Resend (və ya SMTP) qurulmayıbsa, form istifadəçiyə “Mesaj göndərilmədi” xətası göstərir.
 
-## 3c. Avtomatik xəbər çəkmə (başqa saytlardan + AI yenidən yazma)
+## 3c. Avtomatik xəbər çəkmə (tam avtomatik rejim)
 
-**Əvvəlcə SQL:** Supabase → SQL Editor → `supabase/schema.sql` faylının **bütün məzmununu yenidən** yapışdırıb Run edin
-(fayl təkrar işə salınanda təhlükəsizdir; yalnız çatışmayan sütun/cədvəlləri əlavə edir: `sources`, `import_log`,
-`articles.source_url / source_name / imported`).
+**SQL:** Supabase → SQL Editor → `supabase/schema.sql` faylının **bütün məzmununu yenidən** yapışdırıb Run edin
+(təkrar işə salmaq təhlükəsizdir; `sources`, `import_log`, `settings` cədvəllərini və `video_url`, `source_url`, `imported` sütunlarını əlavə edir).
 
-**Pulsuz AI açarı (xərc yoxdur):** https://aistudio.google.com/apikey → Google hesabı ilə daxil ol → **Create API key** (kart tələb olunmur) →
-Vercel-də `GEMINI_API_KEY` kimi əlavə et → Redeploy. Pulsuz səviyyənin dəqiqəlik/günlük limiti var; bot xəbərlər arasında gözləyir və
-limit dolanda xəta yazır (bir az sonra və ya sabah yenidən “Çək” basın). Pulsuz səviyyədə Google göndərilən məzmunu məhsullarını
-yaxşılaşdırmaq üçün istifadə edə bilər — burada yalnız ictimai xəbər mətnləri göndərilir.
-(İstəsəniz ödənişli `ANTHROPIC_API_KEY` də istifadə oluna bilər; `GEMINI_API_KEY` varsa o prioritetdir.)
+**Pulsuz AI açarı:** https://aistudio.google.com/apikey → Create API key → Vercel-də `GEMINI_API_KEY` (Google AI Pro abunəliyi API-ni əhatə etmir;
+açar abunəlikdən asılı olmayaraq pulsuz alınır). Redeploy.
 
-**İstifadə:** `/adminpanel` → **Avto-çəkmə**:
-1. Mənbə əlavə edin: ad + RSS linki (məs. `https://sayt.az/rss`) və ya saytın ana/bölmə səhifəsi. RSS tapılmasa sistem
-   səhifədəki xəbər linklərini özü tapmağa çalışır.
-2. **Çək** düyməsi: yeni xəbər linklərini tapır → hər birini oxuyur → AI mətni **öz sözləri ilə, fərqli cümlə quruluşu ilə**
-   yenidən yazır → başqa saytların adı/domeni və “X-ə istinadən” ifadələri silinir (“Cənub Xəbər bildirir ki…” ilə əvəz olunur) →
-   şəkil ImgBB-yə yüklənir → xəbər **qaralama** kimi saxlanılır. Yoxlayıb **Dərc et** basın
-   (mənbədə “Birbaşa dərc” seçilibsə avtomatik dərc olunur).
-3. Bot yoxlamaları: mənbə saytın `robots.txt` qadağası, mətn çox qısa/reklam, 5 sözlük eyni ardıcıllıq (oxşarlıq) — xəbər ötürülür.
-   Eyni link ikinci dəfə çəkilmir (silinmiş xəbər də geri gəlmir).
-4. **Toplu silmə:** “Xəbərlər” bölməsində süzgəc (Hamısı / Dərc olunmuş / Qaralamalar / Avto-çəkilmiş), “Hamısını seç”, “Seçilmişləri sil”.
+**Necə işləyir:** `/adminpanel` → **Avto-çəkmə** → saytın adını və RSS (və ya ana səhifə) linkini yazıb **Əlavə et** — vəssalam.
+Sistem hər **5 dəqiqədən bir** bütün aktiv saytları yoxlayır; yeni xəbəri tapanda AI onu oxuyur, Azərbaycan dilində **öz sözləri ilə yenidən yazır**,
+başqa saytların adını silir, **kateqoriyasını özü müəyyən edir**, şəkli ImgBB-yə yükləyir və saytda **dərhal dərc edir**.
+Xəbərlər admin panelin “Xəbərlər” siyahısında da görünür (30 saniyədən bir yenilənir; “Avto” nişanı ilə). Hər sayt üçün “Avto” qutusu ilə
+dayandırmaq, “Sil” ilə siyahıdan çıxarmaq olar; yuxarıdakı “Dayandır / İşə sal” düyməsi bütün avtomatik rejimi idarə edir.
 
-**Gündəlik avtomatik çəkmə:** `vercel.json` hər gün 03:00 UTC-də `/api/cron/import` çağırır (aktiv mənbələrdən, hər mənbə üçün
-“Maks/dəfə” qədər). `CRON_SECRET` təyin olunmalıdır — Vercel onu avtomatik `Authorization: Bearer …` başlığı ilə göndərir.
-Vercel Hobby planı yalnız gündə 1 dəfə cron icazə verir; daha tez-tez üçün Pro plan və ya xarici planlayıcı
-(cron-job.org → `GET https://www.cenubxeber.com/api/cron/import`, başlıq `Authorization: Bearer <CRON_SECRET>`) istifadə edin.
+**5 dəqiqəlik planlayıcı (bir dəfəlik qurulur):** Vercel pulsuz plan yalnız gündə 1 cron icazə verir, ona görə 5 dəqiqəlik işi repodakı
+`.github/workflows/auto-import.yml` (GitHub Actions) görür. Hər iki yerdə **eyni gizli dəyər** olmalıdır:
+1. Gizli dəyər yaradın: terminalda `openssl rand -hex 24` (və ya `vercel-env.txt`-dəki `CRON_SECRET`).
+2. **Vercel** → Settings → Environment Variables → `CRON_SECRET` = həmin dəyər → Redeploy.
+3. **GitHub** → repo → Settings → Secrets and variables → Actions → **New repository secret** → ad `CRON_SECRET`, dəyər eyni.
+4. GitHub → Actions → “Avto-çəkmə” → **Run workflow** ilə bir dəfə əl ilə işə salıb yoxlayın. Sonra 5 dəqiqədən bir özü işləyir.
+(GitHub gecikməsi bəzən 5–15 dəqiqəyə çıxa bilər. Alternativ: cron-job.org → `GET https://www.cenubxeber.com/api/cron/import`,
+başlıq `Authorization: Bearer <CRON_SECRET>`, hər 5 dəqiqə.)
 
-> ⚠️ Hüquqi qeyd: başqa media saytlarının məzmununu çəkmək müəllif hüquqları və həmin saytların şərtləri baxımından risklidir.
-> Yalnız icazəniz olan və ya RSS ilə açıq paylaşılan mənbələrdən istifadə edin, çəkilən xəbərləri dərcdən əvvəl oxuyun.
-> Sistem mənbə linkini daxili olaraq (`source_url`) saxlayır, saytda göstərmir.
+**Qeydlər:**
+- Pulsuz Gemini səviyyəsinin dəqiqəlik/günlük limiti var; limit dolanda panel xəta göstərir və növbəti yoxlamada davam edir.
+- “HTTP 403” xətası: həmin sayt serverimizin sorğusunu bloklayır. Saytın **RSS linkini** yazın (məs. `/rss`, `/feed`, `/rss.xml`) və ya sayt sahibindən icazə alın.
+  Sistem `robots.txt` qaydalarına əməl edir.
+- AI mətni mənbəyə çox oxşayırsa (5 sözlük ardıcıllıq yoxlaması) xəbər ötürülür; eyni link ikinci dəfə çəkilmir (silinmiş xəbər də geri gəlmir).
+- ⚠️ Hüquqi qeyd: başqa media saytlarının məzmununu çəkmək müəllif hüquqları və həmin saytların şərtləri baxımından risklidir.
+  Mümkün qədər icazəniz olan və ya RSS ilə açıq paylaşılan mənbələrdən istifadə edin. Mənbə linki daxili olaraq (`source_url`) saxlanılır, saytda göstərilmir.
+- **Toplu silmə:** “Xəbərlər” → süzgəc (Hamısı / Dərc olunmuş / Qaralamalar / Avto-çəkilmiş) → “Hamısını seç” → “Seçilmişləri sil”.
+
+## 3d. YouTube ilə xəbər
+
+Xəbər əlavə edərkən **YouTube linki** xanasına video linkini yapışdırıb **“Videodan doldur”** basın: başlıq, şəkil (video örtüyü) və
+(GEMINI_API_KEY varsa) videonun məzmununa əsasən Azərbaycan dilində mətn avtomatik doldurulur (yazdıqlarınız silinmir). Saytda xəbər açılanda şəklin yerində
+video pleyer görünür (klikləyəndə yüklənir — səhifə sürətli qalır). Linkdən YouTube şəklini kartlarda da istifadə etmək üçün şəkil xanası boş qala bilər.
+
+## 3e. Sosial şəbəkə linkləri
+
+Admin panel → **Sosial şəbəkələr**: Facebook, Instagram, YouTube, TikTok linklərini yazıb saxlayın — üst bar, footer və əlaqə səhifəsi dərhal yenilənir.
+Boş qoyduğunuz şəbəkənin ikonu göstərilmir.
+
+## 3f. E-poçt (Zoho SMTP — ən etibarlı yol)
+
+`info@cenubxeber.com` Zoho Mail qutusudur. Zoho SMTP ilə göndərmək üçün (Resend-dən asılı olmur):
+Zoho → **Accounts → Security → App Passwords → Generate** (ad: “Sayt”) və Vercel-də:
+`SMTP_HOST=smtp.zoho.com`, `SMTP_PORT=465`, `SMTP_USER=info@cenubxeber.com`, `SMTP_PASS=<tətbiq parolu>`, `CONTACT_TO_EMAIL=info@cenubxeber.com`. Redeploy.
+(Zoho Avropa/Hindistan datacenter-dədirsə host `smtp.zoho.eu` / `smtp.zoho.in` olur.) `SMTP_USER/SMTP_PASS` varsa Resend istifadə olunmur.
 
 ## 4. Domen
 

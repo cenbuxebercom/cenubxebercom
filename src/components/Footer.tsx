@@ -4,7 +4,8 @@ import Logo from "./Logo";
 import { FacebookIcon, InstagramIcon, TiktokIcon, YoutubeIcon } from "./icons";
 import Glow from "./fx/Glow";
 import Reveal from "./fx/Reveal";
-import { SITE_EMAIL, SITE_PHONE, SITE_PHONE_TEL, SOCIALS } from "@/lib/site";
+import { SITE_EMAIL, SITE_PHONE, SITE_PHONE_TEL } from "@/lib/site";
+import { getSocials } from "@/lib/settings";
 
 const colA = [
   { label: "Ana səhifə", href: "/" },
@@ -18,14 +19,14 @@ const colB = [
   { label: "Məxfilik siyasəti", href: "/mexfilik-siyaseti" },
   { label: "İstifadə şərtləri", href: "/istifade-sertleri" },
 ];
-const socials = [
-  { label: "Facebook", href: SOCIALS.facebook, I: FacebookIcon },
-  { label: "Instagram", href: SOCIALS.instagram, I: InstagramIcon },
-  { label: "YouTube", href: SOCIALS.youtube, I: YoutubeIcon },
-  { label: "TikTok", href: SOCIALS.tiktok, I: TiktokIcon },
-];
-
-export default function Footer() {
+export default async function Footer() {
+  const links = await getSocials();
+  const socials = [
+    { label: "Facebook", href: links.facebook, I: FacebookIcon },
+    { label: "Instagram", href: links.instagram, I: InstagramIcon },
+    { label: "YouTube", href: links.youtube, I: YoutubeIcon },
+    { label: "TikTok", href: links.tiktok, I: TiktokIcon },
+  ].filter((x) => x.href);
   return (
     <footer className="mt-24">
       <Ticker />
@@ -37,7 +38,7 @@ export default function Footer() {
               <p className="mt-5 max-w-[420px] text-[14px] leading-[1.9] text-white/50">
                 Cənub Xəbər — Azərbaycan və dünyadan operativ, dəqiq və müstəqil xəbərlər.
               </p>
-              <p className="mt-10 text-[13px] text-white/50">Bizi izləyin:</p>
+              {socials.length > 0 && <p className="mt-10 text-[13px] text-white/50">Bizi izləyin:</p>}
               <div className="mt-4 flex gap-5">
                 {socials.map(({ label, href, I }) => (
                   <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className="text-white transition-all hover:-translate-y-1 hover:opacity-70"><I className="h-6 w-6" /></a>

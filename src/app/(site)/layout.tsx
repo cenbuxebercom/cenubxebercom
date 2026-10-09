@@ -5,14 +5,16 @@ import Footer from "@/components/Footer";
 import SmoothScroll from "@/components/fx/SmoothScroll";
 import ScrollProgress from "@/components/fx/ScrollProgress";
 import Cursor from "@/components/fx/Cursor";
+import { getSocials } from "@/lib/settings";
 
-export default function SiteLayout({ children }: { children: React.ReactNode }) {
+export default async function SiteLayout({ children }: { children: React.ReactNode }) {
+  const socials = await getSocials();
   return (
     <>
       <SmoothScroll />
       <ScrollProgress />
       <Cursor />
-      <TopBar />
+      <TopBar socials={socials} />
       <Suspense fallback={<div className="h-[61px] bg-navy" />}>
         <Header />
       </Suspense>

@@ -38,7 +38,14 @@ export async function fetchText(url: string, timeout = 15000, maxBytes = 3_000_0
     signal: AbortSignal.timeout(timeout),
   });
   assertPublicHttpUrl(res.url || url);
-  if (!res.ok) throw new Error(`Sayt cavab vermədi (HTTP ${res.status})`);
+  if (!res.ok) {
+    const host = new URL(url).hostname;
+    throw new Error(
+      res.status === 403 || res.status === 401 || res.status === 429
+        ? `${host} saytı serverimizin sorğusunu blokladı (HTTP ${res.status}). Saytın RSS linkini (məs. /rss, /feed) yazın və ya sayt sahibindən icazə alın.`
+        : `${host} cavab vermədi (HTTP ${res.status})`,
+    );
+  }
   const contentType = res.headers.get("content-type") ?? "";
   const buf = Buffer.from(await res.arrayBuffer()).subarray(0, maxBytes);
   const charset = /charset=([\w-]+)/i.exec(contentType)?.[1] ?? /<meta[^>]+charset=["']?([\w-]+)/i.exec(buf.subarray(0, 2048).toString("latin1"))?.[1] ?? "utf-8";
@@ -143,8 +150,24 @@ function heuristicLinks(html: string, base: string): Candidate[] {
   return out.slice(0, 40);
 }
 
+const FEED_PATHS = ["/feed", "/rss", "/rss.xml", "/feed.xml", "/atom.xml", "/index.xml", "/feed/rss", "/rss/news"];
+
 export async function discover(source: { url: string }): Promise<Candidate[]> {
-  const { text, finalUrl, contentType } = await fetchText(source.url);
+  let text = "", finalUrl = source.url, contentType = "";
+  try {
+    ({ text, finalUrl, contentType } = await fetchText(source.url));
+  } catch (e) {
+    // əsas səhifə bloklanıbsa, tipik RSS ünvanlarını sına
+    const origin = new URL(source.url).origin;
+    for (const p of FEED_PATHS) {
+      try {
+        const f = await fetchText(origin + p, 8000);
+        const parsed = parseFeed(f.text, f.finalUrl);
+        if (parsed.items.length) return finishDiscover(parsed.items, f.finalUrl, parsed.channelHost);
+      } catch { /* növbəti */ }
+    }
+    throw e;
+  }
   const head = text.slice(0, 500).toLowerCase();
   let items: Candidate[];
   let channelHost: string | undefined;
@@ -162,6 +185,10 @@ export async function discover(source: { url: string }): Promise<Candidate[]> {
     }
     if (!items.length) items = heuristicLinks(text, finalUrl);
   }
+  return finishDiscover(items, finalUrl, channelHost);
+}
+
+function finishDiscover(items: Candidate[], finalUrl: string, channelHost?: string): Candidate[] {
   const host = new URL(finalUrl).hostname;
   const seen = new Set<string>();
   return items

@@ -1,7 +1,7 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { ClockIcon, FacebookIcon, InstagramIcon, TiktokIcon, YoutubeIcon } from "./icons";
-import { SOCIALS } from "@/lib/site";
+import type { Socials } from "@/lib/settings";
 
 const DAYS = ["Bazar", "Bazar ertəsi", "Çərşənbə axşamı", "Çərşənbə", "Cümə axşamı", "Cümə", "Şənbə"];
 const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avqust", "sentyabr", "oktyabr", "noyabr", "dekabr"];
@@ -25,14 +25,10 @@ const subscribe = (cb: () => void) => {
   return () => clearInterval(id);
 };
 
-const socials = [
-  { label: "Facebook", href: SOCIALS.facebook, I: FacebookIcon },
-  { label: "Instagram", href: SOCIALS.instagram, I: InstagramIcon },
-  { label: "YouTube", href: SOCIALS.youtube, I: YoutubeIcon },
-  { label: "TikTok", href: SOCIALS.tiktok, I: TiktokIcon },
-];
+const icons = { facebook: FacebookIcon, instagram: InstagramIcon, youtube: YoutubeIcon, tiktok: TiktokIcon } as const;
+const labels = { facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", tiktok: "TikTok" } as const;
 
-export default function TopBar() {
+export default function TopBar({ socials }: { socials: Socials }) {
   const [date, shortDate, time] = useSyncExternalStore(subscribe, now, () => "||").split("|");
   return (
     <div className="bg-navy text-[12px] text-white/70 sm:text-[13px]">
@@ -48,9 +44,12 @@ export default function TopBar() {
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-3 sm:gap-4">
-          {socials.map(({ label, href, I }) => (
-            <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className="flex h-6 w-6 items-center justify-center transition-colors hover:text-white sm:h-auto sm:w-auto"><I className="h-4 w-4" /></a>
-          ))}
+          {(Object.keys(icons) as (keyof Socials)[]).filter((k) => socials[k]).map((k) => {
+            const I = icons[k];
+            return (
+            <a key={k} href={socials[k]} target="_blank" rel="noopener noreferrer" aria-label={labels[k]} className="flex h-6 w-6 items-center justify-center transition-colors hover:text-white sm:h-auto sm:w-auto"><I className="h-4 w-4" /></a>
+            );
+          })}
         </div>
       </div>
     </div>

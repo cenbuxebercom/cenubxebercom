@@ -26,7 +26,14 @@ export async function POST(req: Request) {
   const { data: clash } = await db.from("articles").select("id").eq("slug", slug).maybeSingle();
   if (clash) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
 
-  const { data, error } = await db.from("articles").insert({ ...parsed.data, slug }).select().single();
+  let { data, error } = await db.from("articles").insert({ ...parsed.data, slug }).select().single();
+  if (error && /video_url/.test(error.message)) {
+    // `video_url` sütunu hələ yaradılmayıb (schema.sql v4 işə salınmayıb)
+    if (parsed.data.video_url) return json({ error: "Supabase-də `video_url` sütunu yoxdur — schema.sql faylını SQL Editor-da yenidən işə salın" }, 500);
+    const { video_url: _omit, ...rest } = parsed.data;
+    void _omit;
+    ({ data, error } = await db.from("articles").insert({ ...rest, slug }).select().single());
+  }
   if (error) return json({ error: error.message }, 500);
   revalidateTag("articles", { expire: 0 });
   return json({ article: data }, 201);

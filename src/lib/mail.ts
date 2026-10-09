@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import { SITE_EMAIL } from "./site";
 
-export type MailResult = { ok: true } | { ok: false; error: string };
+export type MailResult = { ok: true; via: "smtp" | "resend"; id?: string } | { ok: false; error: string };
 
 const smtpConfigured = () => Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
 
@@ -25,7 +25,7 @@ async function sendSmtp(p: { to: string; subject: string; text: string; replyTo?
       subject: p.subject,
       text: p.text,
     });
-    return { ok: true };
+    return { ok: true, via: "smtp" };
   } catch (e) {
     const msg = `SMTP xətası: ${e instanceof Error ? e.message : String(e)}`;
     console.error("[mail]", msg);
@@ -51,7 +51,10 @@ async function send(payload: Record<string, unknown>): Promise<MailResult> {
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15000),
     });
-    if (res.ok) return { ok: true };
+    if (res.ok) {
+      const okBody = await res.json().catch(() => null);
+      return { ok: true, via: "resend", id: okBody?.id };
+    }
     const body = await res.json().catch(() => null);
     const detail: string = body?.message ?? body?.name ?? "bilinməyən xəta";
     const hint = /not verified|verify/i.test(detail)
@@ -94,13 +97,32 @@ export function sendContactMail(m: { name: string; email: string; message: strin
   });
 }
 
+/** Resend-in verdiyi məktub statusu (delivered / bounced / delivery_delayed ...). */
+async function resendStatus(id: string): Promise<string | null> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  for (let i = 0; i < 4; i++) {
+    await new Promise((r) => setTimeout(r, 2500));
+    try {
+      const res = await fetch(`https://api.resend.com/emails/${id}`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) });
+      const d = await res.json().catch(() => null);
+      const ev: string | undefined = d?.last_event;
+      if (ev && ev !== "sent" && ev !== "queued") return ev;
+      if (i === 3) return ev ?? null;
+    } catch { /* növbəti cəhd */ }
+  }
+  return null;
+}
+
 /** Admin paneldən "E-poçt testi" üçün. */
-export function sendTestMail(): Promise<MailResult & { to: string; from: string }> {
+export async function sendTestMail(): Promise<(MailResult & { to: string; from: string; status?: string | null })> {
   const { to, from } = target();
-  return send({
+  const r = await send({
     from,
     to: [to],
     subject: "Cənub Xəbər — test məktubu",
     text: "Bu, admin paneldən göndərilən test məktubudur. Bunu aldınızsa, əlaqə formu e-poçt göndərməyə hazırdır.",
-  }).then((r) => ({ ...r, to, from }));
+  });
+  if (r.ok && r.via === "resend" && r.id) return { ...r, to, from, status: await resendStatus(r.id) };
+  return { ...r, to, from: r.ok && r.via === "smtp" ? String(process.env.SMTP_USER) : from };
 }

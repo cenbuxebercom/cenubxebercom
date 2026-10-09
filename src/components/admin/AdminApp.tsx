@@ -3,11 +3,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { categories, categoryName } from "@/data/news";
 import { api } from "./api";
 import SourcesPanel from "./SourcesPanel";
+import SocialsPanel from "./SocialsPanel";
 
 type Row = {
   id: string; slug: string; title: string; excerpt: string; body: string; category: string; image: string;
   author: string | null; featured: boolean; published: boolean; views: number; published_at: string;
-  imported?: boolean; source_name?: string | null; source_url?: string | null;
+  imported?: boolean; source_name?: string | null; source_url?: string | null; video_url?: string | null;
 };
 
 const input = "w-full rounded-lg border border-[#d9d3cc] bg-white px-3.5 py-2.5 text-[14px] outline-none transition-colors focus:border-navy";
@@ -93,12 +94,12 @@ function Login({ onDone, configured }: { onDone: () => void; configured: boolean
 }
 
 const empty = {
-  id: "", title: "", excerpt: "", body: "", category: "siyaset", image: "", author: "",
+  id: "", title: "", excerpt: "", body: "", category: "siyaset", image: "", author: "", video_url: "",
   featured: false, published: true, published_at: toLocal(new Date().toISOString()),
 };
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<"list" | "edit" | "sources">("list");
+  const [tab, setTab] = useState<"list" | "edit" | "sources" | "socials">("list");
   const [filter, setFilter] = useState<"all" | "published" | "draft" | "imported">("all");
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [rows, setRows] = useState<Row[]>([]);
@@ -107,6 +108,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [note, setNote] = useState<{ t: "ok" | "err"; m: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [ytBusy, setYtBusy] = useState(false);
 
   const flash = (t: "ok" | "err", m: string) => { setNote({ t, m }); setTimeout(() => setNote(null), 4000); };
 
@@ -116,9 +118,11 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     setRows(r.articles ?? []);
   }, []);
   useEffect(() => {
-    // ilk yükləmə: serverdən xəbərləri gətir
+    // ilk yükləmə + hər 30 saniyədən bir (avto-çəkilən yeni xəbərlər siyahıda görünsün)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
+    const id = setInterval(load, 30000);
+    return () => clearInterval(id);
   }, [load]);
 
   const filtered = useMemo(
@@ -145,7 +149,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   };
 
   const edit = (r?: Row) => {
-    setForm(r ? { id: r.id, title: r.title, excerpt: r.excerpt, body: r.body, category: r.category, image: r.image, author: r.author ?? "", featured: r.featured, published: r.published, published_at: toLocal(r.published_at) } : { ...empty, published_at: toLocal(new Date().toISOString()) });
+    setForm(r ? { id: r.id, title: r.title, excerpt: r.excerpt, body: r.body, category: r.category, image: r.image, author: r.author ?? "", video_url: r.video_url ?? "", featured: r.featured, published: r.published, published_at: toLocal(r.published_at) } : { ...empty, published_at: toLocal(new Date().toISOString()) });
     setTab("edit");
     window.scrollTo({ top: 0 });
   };
@@ -178,6 +182,28 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     load();
   };
 
+  const fillFromYoutube = async () => {
+    if (!form.video_url.trim()) return flash("err", "Əvvəlcə YouTube linkini yazın");
+    setYtBusy(true);
+    flash("ok", "Video oxunur… AI mətn yazırsa 30–60 saniyə çəkə bilər");
+    const r = await api<{
+      title: string; thumbnail: string; url: string; aiNote?: string;
+      draft?: { title: string; excerpt: string; body: string; category: string };
+    }>("/api/admin/youtube", { method: "POST", body: JSON.stringify({ url: form.video_url }) });
+    setYtBusy(false);
+    if (r.error) return flash("err", r.error);
+    setForm((f) => ({
+      ...f,
+      video_url: r.url,
+      title: f.title || r.draft?.title || r.title,
+      excerpt: f.excerpt || r.draft?.excerpt || "",
+      body: f.body || r.draft?.body || "",
+      category: !f.id && r.draft?.category ? r.draft.category : f.category,
+      image: f.image || r.thumbnail,
+    }));
+    flash(r.draft ? "ok" : "ok", r.draft ? "Video əsasında başlıq, təsvir və mətn dolduruldu — yoxlayıb yadda saxlayın" : `Başlıq və şəkil dolduruldu.${r.aiNote ? " " + r.aiNote : ""}`);
+  };
+
   const upload = async (original: File) => {
     setUploading(true);
     const file = await compressImage(original);
@@ -199,14 +225,19 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       <header className="mb-6 flex flex-wrap items-center gap-3">
         <p className="text-[20px] font-extrabold tracking-[-0.04em] text-navy">Cənub <span className="rounded bg-brand px-1.5 text-white">Xəbər</span> <span className="ml-1 text-[13px] font-medium tracking-normal text-[#6f6f6f]">admin</span></p>
         <nav className="ml-auto flex flex-wrap gap-2 text-[14px]">
-          {([["list", "Xəbərlər"], ["edit", form.id ? "Redaktə" : "Yeni xəbər"], ["sources", "Avto-çəkmə"]] as const).map(([k, l]) => (
+          {([["list", "Xəbərlər"], ["edit", form.id ? "Redaktə" : "Yeni xəbər"], ["sources", "Avto-çəkmə"], ["socials", "Sosial şəbəkələr"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => (k === "edit" && tab !== "edit" ? edit() : setTab(k))} className={`${btn} ${tab === k ? "bg-navy text-white" : "bg-white text-ink hover:bg-[#e9e5df]"}`}>{l}</button>
           ))}
           <button
             onClick={async () => {
-              const r = await api<{ to?: string }>("/api/admin/mail-test", { method: "POST", body: "{}" });
-              if (r.error) flash("err", `E-poçt testi alınmadı — ${r.error}`);
-              else flash("ok", `Test məktubu göndərildi → ${r.to}. Gələnlər qutusunu (və spam-ı) yoxlayın.`);
+              flash("ok", "Test məktubu göndərilir… (təxminən 10 saniyə)");
+              const r = await api<{ to?: string; via?: string; status?: string | null; from?: string }>("/api/admin/mail-test", { method: "POST", body: "{}" });
+              if (r.error) return flash("err", `E-poçt testi alınmadı — ${r.error}`);
+              const st = r.status;
+              if (r.via === "smtp") flash("ok", `SMTP ilə göndərildi (${r.from} → ${r.to}). Gələnlər qutusunu və spam-ı yoxlayın.`);
+              else if (st === "delivered") flash("ok", `Resend: çatdırıldı → ${r.to}. Zoho qəbul etdi; gələnlər qutusunda yoxdursa SPAM/Karantin qovluğuna baxın.`);
+              else if (st === "bounced" || st === "failed" || st === "suppressed" || st === "complained") flash("err", `Resend: məktub çatmadı (${st}). Zoho/alıcı rədd etdi — KURULUM.md-dəki Zoho SMTP variantına keçin.`);
+              else flash("ok", `Resend qəbul etdi (status: ${st ?? "gözlənilir"}) → ${r.to}. Resend → Emails səhifəsində statusa baxın.`);
             }}
             className={`${btn} bg-white text-ink hover:bg-[#e9e5df]`}
           >E-poçt testi</button>
@@ -290,6 +321,15 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
               <textarea className={input} rows={2} value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} maxLength={500} /></label>
             <label className="md:col-span-2"><span className="mb-1 block text-[13px] text-[#6f6f6f]">Xəbərin mətni (abzasları boş sətirlə ayırın)</span>
               <textarea className={input} rows={12} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></label>
+            <div className="md:col-span-2 rounded-xl border border-[#e6e1db] bg-[#fbfaf8] p-4">
+              <span className="mb-1 block text-[13px] text-[#6f6f6f]">YouTube linki (ixtiyari) — xəbərdə şəklin yerində video görünür</span>
+              <div className="flex flex-wrap gap-3">
+                <input className={`${input} min-w-[220px] flex-1`} placeholder="https://www.youtube.com/watch?v=..." value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} />
+                <button type="button" disabled={ytBusy} onClick={fillFromYoutube} className={`${btn} bg-[#ff0000] text-white hover:bg-[#d90000]`}>{ytBusy ? "Oxunur…" : "Videodan doldur"}</button>
+                {form.video_url && !ytBusy && <button type="button" onClick={() => setForm({ ...form, video_url: "" })} className={`${btn} bg-white text-ink hover:bg-[#e9e5df]`}>Videonu sil</button>}
+              </div>
+              <p className="mt-2 text-[12px] leading-[1.6] text-[#8a8a8a]">“Videodan doldur” başlığı, şəkli (video örtüyü) və Gemini ilə videonun məzmununa əsasən Azərbaycan dilində mətn yazır. Boş olan xanalar doldurulur, yazdıqlarınız silinmir.</p>
+            </div>
             <div className="md:col-span-2">
               <span className="mb-1 block text-[13px] text-[#6f6f6f]">Şəkil (cihazdan yüklənir, avtomatik sıxılır)</span>
               <div className="flex flex-wrap items-center gap-3">
@@ -320,6 +360,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       )}
 
       {tab === "sources" && <SourcesPanel flash={flash} onImported={load} />}
+      {tab === "socials" && <SocialsPanel flash={flash} />}
     </div>
   );
 }

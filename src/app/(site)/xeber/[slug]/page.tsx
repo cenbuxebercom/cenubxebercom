@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import Img from "@/components/Img";
 import ShareBar from "@/components/ShareBar";
 import ViewCounter from "@/components/ViewCounter";
+import YoutubeEmbed from "@/components/YoutubeEmbed";
+import { parseYoutubeId } from "@/lib/youtube";
 import { Badge, Container } from "@/components/ui";
 import { ImageCard } from "@/components/cards";
 import { bodyParagraphs, byCategory, findArticle, getAllArticles } from "@/lib/articles";
@@ -36,6 +38,7 @@ async function Content({ params }: { params: Promise<{ slug: string }> }) {
   if (!a) notFound();
   const related = byCategory(all, a.category).filter((x) => x.slug !== a.slug).slice(0, 4);
   const paras = bodyParagraphs(a.body);
+  const vid = a.video ? parseYoutubeId(a.video) : null;
   return (
     <>
       <ViewCounter slug={a.slug} />
@@ -46,10 +49,12 @@ async function Content({ params }: { params: Promise<{ slug: string }> }) {
           {a.author && (<><span>{a.author}</span><span className="mx-3 h-4 w-px bg-[#6f6f6f]" /></>)}
           <span>{fmtTime(a.date)}</span>
         </div>
-        {a.image && (
-          <>
+        {vid ? (
+          <div className="mt-6 w-full max-w-[640px]"><YoutubeEmbed id={vid} title={a.title} /></div>
+        ) : (
+          a.image && (
             <div className="mt-6 aspect-[16/10] w-full max-w-[520px] overflow-hidden rounded-xl"><Img src={a.image} alt={a.title} priority sizes="(min-width: 640px) 520px, 100vw" /></div>
-          </>
+          )
         )}
         {a.excerpt && <p className="mt-6 text-[16px] font-medium leading-[1.7] text-[#222]">{a.excerpt}</p>}
         <div className="mt-5 space-y-4 text-[15px] leading-[1.85] text-[#333]">

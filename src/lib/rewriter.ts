@@ -65,7 +65,7 @@ Respond with ONLY one JSON object (no markdown, no code fences) with exactly the
 {"skip": boolean, "skip_reason": string, "title": string, "excerpt": string, "body": string, "category": one of [${slugs.join(", ")}]}`;
 
 /** Google Gemini — pulsuz səviyyə (Google AI Studio açarı, kart tələb olunmur). */
-async function geminiRewrite(user: string): Promise<unknown> {
+async function geminiRewrite(parts: unknown[]): Promise<unknown> {
   const key = process.env.GEMINI_API_KEY!;
   const model = (process.env.GEMINI_MODEL || "gemini-3.8-flash").trim();
   let lastErr = "";
@@ -75,7 +75,7 @@ async function geminiRewrite(user: string): Promise<unknown> {
       headers: { "x-goog-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM + JSON_FORMAT }] },
-        contents: [{ role: "user", parts: [{ text: user }] }],
+        contents: [{ role: "user", parts }],
         generationConfig: { responseMimeType: "application/json", temperature: 0.8, maxOutputTokens: 16384 },
       }),
       signal: AbortSignal.timeout(100_000),
@@ -88,8 +88,8 @@ async function geminiRewrite(user: string): Promise<unknown> {
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(`Gemini ${res.status}: ${data?.error?.message ?? "xəta"}`.slice(0, 300));
     if (data?.promptFeedback?.blockReason) throw new Error(`Gemini materialı blokladı (${data.promptFeedback.blockReason})`);
-    const parts: { text?: string; thought?: boolean }[] = data?.candidates?.[0]?.content?.parts ?? [];
-    const text = parts.filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim();
+    const outParts: { text?: string; thought?: boolean }[] = data?.candidates?.[0]?.content?.parts ?? [];
+    const text = outParts.filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim();
     if (!text) throw new Error(`Gemini boş cavab qaytardı (${data?.candidates?.[0]?.finishReason ?? "?"})`);
     try {
       return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
@@ -123,7 +123,10 @@ export async function rewriteArticle(input: { title: string; text: string; outle
   if (!provider) throw new Error("AI açarı təyin edilməyib (pulsuz variant: GEMINI_API_KEY)");
   if (provider === "anthropic") return anthropicRewrite(user);
 
-  const raw = await geminiRewrite(user);
+  return coerce(await geminiRewrite([{ text: user }]));
+}
+
+function coerce(raw: unknown): Rewritten {
   const parsed = Out.safeParse(raw);
   if (parsed.success) return parsed.data;
   // kateqoriya düzgün yazılmayıbsa, qalanını qəbul et
@@ -135,6 +138,15 @@ export async function rewriteArticle(input: { title: string; text: string; outle
     };
   }
   throw new Error("AI cavabı gözlənilən formatda deyil");
+}
+
+/** YouTube videosunu Gemini-yə verib ondan Azərbaycan dilində orijinal xəbər mətni yazdırır (pulsuz səviyyə). */
+export async function draftFromYoutube(url: string, videoTitle: string): Promise<Rewritten> {
+  if (!process.env.GEMINI_API_KEY) throw new Error("Videodan mətn yazmaq üçün GEMINI_API_KEY lazımdır");
+  const prompt =
+    `The YouTube video attached is a news-related video titled "${videoTitle}". Watch and listen to it, then write an ORIGINAL Azerbaijani news article for Cənub Xəbər based only on what is said and shown in the video. ` +
+    `Follow every rule of your instructions (facts only, own wording, no mention of the channel/outlet name, neutral journalistic Azerbaijani). Set skip=true if the video is not news-like (music, entertainment clip, ad) or has too little information.`;
+  return coerce(await geminiRewrite([{ fileData: { fileUri: url } }, { text: prompt }]));
 }
 
 /* -------- keyfiyyət yoxlamaları -------- */

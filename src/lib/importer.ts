@@ -23,9 +23,11 @@ export async function discoverNew(source: Source): Promise<Candidate[]> {
   const urls = all.map((c) => c.url);
   const seen = new Set<string>();
   const dayAgo = Date.now() - 24 * 3600 * 1000;
+  const tenMinAgo = Date.now() - 10 * 60 * 1000;
   const { data: logs } = await db.from("import_log").select("url,status,created_at").in("url", urls);
   for (const l of logs ?? []) {
-    if (l.status !== "failed" || +new Date(l.created_at) > dayAgo) seen.add(l.url);
+    const at = +new Date(l.created_at);
+    if (l.status === "failed" ? at > dayAgo : l.status === "processing" ? at > tenMinAgo : true) seen.add(l.url);
   }
   const { data: arts } = await db.from("articles").select("source_url").in("source_url", urls);
   for (const a of arts ?? []) if (a.source_url) seen.add(a.source_url);
@@ -37,6 +39,24 @@ async function log(url: string, sourceId: string, status: string, extra: { artic
   await db?.from("import_log").upsert({
     url, source_id: sourceId, status, article_id: extra.articleId ?? null, error: extra.error?.slice(0, 500) ?? null, created_at: new Date().toISOString(),
   });
+}
+
+/** Eyni xəbərin iki paralel prosesdə (məs. cron + əl ilə) təkrar işlənməsinin qarşısını alır. */
+async function claim(url: string, sourceId: string): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+  const now = new Date().toISOString();
+  const { error } = await db.from("import_log").insert({ url, source_id: sourceId, status: "processing", created_at: now });
+  if (!error) return true;
+  const failedCut = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const procCut = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { data } = await db
+    .from("import_log")
+    .update({ status: "processing", created_at: now })
+    .eq("url", url)
+    .or(`and(status.eq.failed,created_at.lt.${failedCut}),and(status.eq.processing,created_at.lt.${procCut})`)
+    .select("url");
+  return Boolean(data?.length);
 }
 
 async function uploadToImgbb(blob: Blob, name: string): Promise<string> {
@@ -61,6 +81,7 @@ export async function processItem(source: Source, cand: Candidate): Promise<Proc
   const url = cand.url;
   try {
     assertPublicHttpUrl(url);
+    if (!(await claim(url, source.id))) return { status: "skipped", reason: "Bu xəbər artıq işlənir və ya işlənib" };
 
     if (!(await robotsAllowed(url))) {
       await log(url, source.id, "skipped", { error: "robots.txt icazə vermir" });
@@ -139,4 +160,79 @@ export async function loadSource(id: string): Promise<Source | null> {
   if (!db) return null;
   const { data } = await db.from("sources").select("*").eq("id", id).maybeSingle();
   return (data as Source | null) ?? null;
+}
+
+
+/* ===================== AVTOMATİK REJİM ===================== */
+async function pool<T>(items: T[], size: number, fn: (x: T) => Promise<void>) {
+  let i = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(size, items.length) }, async () => {
+      while (i < items.length) await fn(items[i++]);
+    }),
+  );
+}
+
+export async function isAutoEnabled(): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+  const { data } = await db.from("settings").select("value").eq("key", "auto_import").maybeSingle();
+  return (data?.value as { enabled?: boolean } | null)?.enabled !== false;
+}
+
+export type RunStats = {
+  at: string; done: number; skipped: number; failed: number; published: number; seconds: number;
+  errors: string[]; disabled?: boolean;
+};
+
+/**
+ * Bütün aktiv mənbələri yoxlayır, yeni xəbərləri tapır, AI ilə yenidən yazıb kateqoriyasına uyğun əlavə edir.
+ * Cron (5 dəqiqədən bir) və admin paneldəki "İndi yoxla" düyməsi bunu çağırır.
+ */
+export async function runAutoImport(o: { budgetMs: number; sourceId?: string; maxItems?: number; force?: boolean }): Promise<RunStats> {
+  const db = getDb();
+  if (!db) throw new Error("Supabase təyin edilməyib");
+  const started = Date.now();
+  const stats: RunStats = { at: new Date().toISOString(), done: 0, skipped: 0, failed: 0, published: 0, seconds: 0, errors: [] };
+
+  if (!o.force && !(await isAutoEnabled())) return { ...stats, disabled: true };
+
+  let q = db.from("sources").select("*");
+  q = o.sourceId ? q.eq("id", o.sourceId) : q.eq("active", true);
+  const { data } = await q.order("last_run_at", { ascending: true, nullsFirst: true });
+  const sources = (data ?? []) as Source[];
+
+  const found = new Map<string, Candidate[]>();
+  await pool(sources, 3, async (s) => {
+    try {
+      found.set(s.id, (await discoverNew(s)).slice(0, Math.max(1, s.max_per_run)));
+    } catch (e) {
+      stats.errors.push(`${s.name}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  });
+
+  // mənbələr arası növbə ilə (bir sayt digərlərini sıxışdırmasın)
+  const tasks: { s: Source; c: Candidate }[] = [];
+  const cap = o.maxItems ?? 12;
+  for (let round = 0; tasks.length < cap; round++) {
+    let any = false;
+    for (const s of sources) {
+      const c = found.get(s.id)?.[round];
+      if (c && tasks.length < cap) { tasks.push({ s, c }); any = true; }
+    }
+    if (!any) break;
+  }
+
+  await pool(tasks, 2, async ({ s, c }) => {
+    if (Date.now() - started > o.budgetMs) return;
+    const r = await processItem(s, c);
+    if (r.status === "done") { stats.done++; if (r.published) stats.published++; }
+    else if (r.status === "skipped") stats.skipped++;
+    else { stats.failed++; if (stats.errors.length < 6) stats.errors.push(`${s.name}: ${r.error}`); }
+  });
+
+  if (sources.length) await db.from("sources").update({ last_run_at: new Date().toISOString() }).in("id", sources.map((s) => s.id));
+  stats.seconds = Math.round((Date.now() - started) / 1000);
+  await db.from("settings").upsert({ key: "import_status", value: stats, updated_at: new Date().toISOString() });
+  return stats;
 }

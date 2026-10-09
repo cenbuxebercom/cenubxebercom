@@ -5,7 +5,8 @@ import Reveal from "@/components/fx/Reveal";
 import Tilt from "@/components/fx/Tilt";
 import { Container } from "@/components/ui";
 import { FacebookIcon, InstagramIcon, MailIcon, PhoneIcon, TiktokIcon, YoutubeIcon } from "@/components/icons";
-import { SITE_EMAIL, SITE_PHONE, SITE_PHONE_TEL, SOCIALS } from "@/lib/site";
+import { SITE_EMAIL, SITE_PHONE, SITE_PHONE_TEL } from "@/lib/site";
+import { getSocials } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Əlaqə",
@@ -15,7 +16,9 @@ export const metadata: Metadata = {
 const card = "flex items-center gap-4 rounded-2xl border border-[#e6e1db] bg-white p-5 transition-colors hover:border-brand";
 const icon = "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#fdf3ee] text-brand";
 
-export default function Elaqe() {
+export default async function Elaqe() {
+  const links = await getSocials();
+  const socials = ([["Facebook", links.facebook, FacebookIcon], ["Instagram", links.instagram, InstagramIcon], ["YouTube", links.youtube, YoutubeIcon], ["TikTok", links.tiktok, TiktokIcon]] as const).filter((x) => x[1]);
   return (
     <>
       <PageTitle title="Əlaqə" sub="Xəbər, təklif, düzəliş və ya əməkdaşlıq üçün redaksiyamızla əlaqə saxlayın." />
@@ -39,14 +42,17 @@ export default function Elaqe() {
           </Reveal>
           <Reveal dir="right" delay={0.16}>
             <div className="rounded-2xl bg-navy p-6 text-white">
-              <p className="text-[15px] font-semibold">Bizi sosial şəbəkələrdə izləyin</p>
-              <div className="mt-4 flex gap-5">
-                {[["Facebook", SOCIALS.facebook, FacebookIcon], ["Instagram", SOCIALS.instagram, InstagramIcon], ["YouTube", SOCIALS.youtube, YoutubeIcon], ["TikTok", SOCIALS.tiktok, TiktokIcon]].map(([l, h, I]) => {
-                  const Icon = I as typeof FacebookIcon;
-                  return <a key={l as string} href={h as string} target="_blank" rel="noopener noreferrer" aria-label={l as string} className="transition-transform hover:-translate-y-1"><Icon className="h-6 w-6" /></a>;
-                })}
-              </div>
-              <p className="mt-5 text-[13px] leading-[1.7] text-white/60">Xəbər göndərmək və ya düzəliş təklif etmək üçün telefon, e-poçt və ya sağdakı formadan istifadə edə bilərsiniz.</p>
+              {socials.length > 0 && (
+                <>
+                  <p className="text-[15px] font-semibold">Bizi sosial şəbəkələrdə izləyin</p>
+                  <div className="mt-4 flex gap-5">
+                    {socials.map(([l, h, Icon]) => (
+                      <a key={l} href={h} target="_blank" rel="noopener noreferrer" aria-label={l} className="transition-transform hover:-translate-y-1"><Icon className="h-6 w-6" /></a>
+                    ))}
+                  </div>
+                </>
+              )}
+              <p className={`${socials.length ? "mt-5" : ""} text-[13px] leading-[1.7] text-white/60`}>Xəbər göndərmək və ya düzəliş təklif etmək üçün telefon, e-poçt və ya sağdakı formadan istifadə edə bilərsiniz.</p>
             </div>
           </Reveal>
         </div>

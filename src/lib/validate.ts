@@ -1,8 +1,9 @@
 import { validCategory } from "./articles";
+import { parseYoutubeId, youtubeWatchUrl } from "./youtube";
 
 export type ArticleInput = {
   title: string; excerpt: string; body: string; category: string; image: string;
-  author: string | null; featured: boolean; published: boolean; published_at: string;
+  author: string | null; featured: boolean; published: boolean; published_at: string; video_url: string | null;
 };
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -16,6 +17,9 @@ export function parseArticle(raw: unknown): { ok: true; data: ArticleInput } | {
   if (title.length < 3) return { ok: false, error: "Başlıq ən azı 3 simvol olmalıdır" };
   if (!validCategory(category)) return { ok: false, error: "Kateqoriya seçilməyib" };
   if (image && !/^https:\/\//i.test(image)) return { ok: false, error: "Şəkil linki https:// ilə başlamalıdır" };
+  const videoRaw = str(r.video_url, 300);
+  const vid = videoRaw ? parseYoutubeId(videoRaw) : null;
+  if (videoRaw && !vid) return { ok: false, error: "YouTube linki düzgün deyil" };
   const when = typeof r.published_at === "string" && !Number.isNaN(Date.parse(r.published_at)) ? new Date(r.published_at).toISOString() : new Date().toISOString();
   return {
     ok: true,
@@ -27,6 +31,7 @@ export function parseArticle(raw: unknown): { ok: true; data: ArticleInput } | {
       featured: Boolean(r.featured),
       published: r.published === undefined ? true : Boolean(r.published),
       published_at: when,
+      video_url: vid ? youtubeWatchUrl(vid) : null,
     },
   };
 }

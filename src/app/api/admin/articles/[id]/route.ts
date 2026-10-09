@@ -13,8 +13,14 @@ export async function PUT(req: Request, { params }: Ctx) {
   const parsed = parseArticle(await req.json().catch(() => null));
   if (!parsed.ok) return json({ error: parsed.error }, 400);
   const { id } = await params;
-  const { data, error } = await db
+  let { data, error } = await db
     .from("articles").update({ ...parsed.data, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+  if (error && /video_url/.test(error.message)) {
+    if (parsed.data.video_url) return json({ error: "Supabase-də `video_url` sütunu yoxdur — schema.sql faylını SQL Editor-da yenidən işə salın" }, 500);
+    const { video_url: _omit, ...rest } = parsed.data;
+    void _omit;
+    ({ data, error } = await db.from("articles").update({ ...rest, updated_at: new Date().toISOString() }).eq("id", id).select().single());
+  }
   if (error) return json({ error: error.message }, 500);
   revalidateTag("articles", { expire: 0 });
   return json({ article: data });

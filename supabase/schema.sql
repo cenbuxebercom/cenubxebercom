@@ -89,3 +89,16 @@ alter table public.import_log enable row level security;
 -- v3: əlaqə mesajlarının e-poçt statusu
 -- =====================================================================
 alter table public.messages add column if not exists mail_status text;  -- 'sent' və ya xəta mətni
+
+
+-- =====================================================================
+-- v4: sosial şəbəkə linkləri (admin paneldən dəyişir) + xəbərə YouTube videosu
+-- =====================================================================
+alter table public.articles add column if not exists video_url text;
+
+create table if not exists public.settings (
+  key        text primary key,
+  value      jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.settings enable row level security;
