@@ -2,7 +2,7 @@ import { getDb } from "./db";
 import { slugify } from "./slug";
 import { validCategory } from "./articles";
 import { assertPublicHttpUrl, discover, downloadImage, extractArticle, fetchText, robotsAllowed, type Candidate } from "./fetcher";
-import { aiConfigured, overlap, rewriteArticle, scrubOutlet } from "./rewriter";
+import { addAttribution, aiConfigured, aiProvider, hasAttribution, overlap, rewriteArticle, scrubOutlet } from "./rewriter";
 
 export type Source = {
   id: string; name: string; url: string; kind: string; category: string | null;
@@ -119,7 +119,13 @@ export async function processItem(source: Source, cand: Candidate): Promise<Proc
 
     const title = scrubOutlet(draft.title, outletNames).slice(0, 200);
     const excerpt = scrubOutlet(draft.excerpt, outletNames).slice(0, 500);
-    const body = scrubOutlet(draft.body, outletNames);
+    let body = scrubOutlet(draft.body, outletNames);
+    if (!hasAttribution(body) && aiProvider() === "gemini") {
+      try {
+        const [first, ...rest] = body.split(/\n{2,}/);
+        body = [await addAttribution(first), ...rest].join("\n\n");
+      } catch { /* istinad əlavə olunmasa belə xəbər saxlanılır */ }
+    }
     if (title.length < 5 || body.length < 120) throw new Error("AI boş/qısa mətn qaytardı");
 
     // şəkil
@@ -240,4 +246,27 @@ export async function runAutoImport(o: { budgetMs: number; sourceId?: string; ma
   stats.seconds = Math.round((Date.now() - started) / 1000);
   await db.from("settings").upsert({ key: "import_status", value: stats, updated_at: new Date().toISOString() });
   return stats;
+}
+
+/** Əvvəl çəkilmiş avto-xəbərlərdə "Cənub Xəbər bildirir ki" istinadı yoxdursa əlavə edir (cron: ?fix=attribution). */
+export async function fixAttributions(max = 15): Promise<{ checked: number; fixed: number; failed: number }> {
+  const db = getDb();
+  if (!db) throw new Error("Supabase təyin edilməyib");
+  const { data } = await db.from("articles").select("id,body").eq("imported", true).order("created_at", { ascending: false }).limit(200);
+  const todo = (data ?? []).filter((a) => !hasAttribution(a.body ?? "")).slice(0, max);
+  const out = { checked: data?.length ?? 0, fixed: 0, failed: 0 };
+  for (const a of todo) {
+    try {
+      const [first, ...rest] = String(a.body).split(/\n{2,}/);
+      const body = [await addAttribution(first), ...rest].join("\n\n");
+      const { error } = await db.from("articles").update({ body, updated_at: new Date().toISOString() }).eq("id", a.id);
+      if (error) throw new Error(error.message);
+      out.fixed++;
+    } catch (e) {
+      out.failed++;
+      console.error("[fix attribution]", a.id, e instanceof Error ? e.message : e);
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return out;
 }

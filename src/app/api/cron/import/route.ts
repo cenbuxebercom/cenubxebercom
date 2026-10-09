@@ -1,7 +1,7 @@
 import { revalidateTag } from "next/cache";
 import { timingSafeEqual } from "node:crypto";
 import { json } from "@/lib/auth";
-import { runAutoImport } from "@/lib/importer";
+import { fixAttributions, runAutoImport } from "@/lib/importer";
 import { BOT_UA, assertPublicHttpUrl } from "@/lib/fetcher";
 
 export const maxDuration = 300;
@@ -24,6 +24,16 @@ export async function GET(req: Request) {
       return json({ probe, status: r.status, finalUrl: r.url, server: r.headers.get("server"), cf: r.headers.get("cf-ray") ? true : false, bytes: body.length, sample: body.slice(0, 200) });
     } catch (e) {
       return json({ probe, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  if (new URL(req.url).searchParams.get("fix") === "attribution") {
+    try {
+      const r = await fixAttributions(15);
+      revalidateTag("articles", { expire: 0 });
+      return json({ ok: true, ...r });
+    } catch (e) {
+      return json({ error: e instanceof Error ? e.message : "Xəta" }, 500);
     }
   }
 

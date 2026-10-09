@@ -28,7 +28,7 @@ ORIGINAL WORDING
 
 SOURCE OUTLETS
 - Remove ALL references to the original outlet and to other media outlets: their names, domains, logos, "X saytına istinadən", "X agentliyinə görə", photo/video credits, watermark mentions, calls to follow/subscribe, ads, related-article text.
-- Where the source says an outlet reports something, write it as Cənub Xəbər's own reporting, for example "Cənub Xəbər bildirir ki, ..." or "Cənub Xəbər məlumat verir ki, ..." (use sparingly, at most once or twice).
+- MANDATORY ATTRIBUTION: the very first sentence of the body must be attributed to Cənub Xəbər in this pattern: "Cənub Xəbər bildirir ki, <key fact>." (you may vary the verb: "Cənub Xəbər məlumat verir ki, ..." or "Cənub Xəbər xəbər verir ki, ..."). Use it exactly once, in the first paragraph only, and make the sentence grammatical Azerbaijani. This replaces any "according to <outlet>" / "<outlet> saytına istinadən" phrasing from the source.
 - Keep attribution to the PRIMARY source of information (a ministry, police, court, official, expert, company, eyewitness) - that is part of the facts, not a media outlet.
 
 OUTPUT FIELDS
@@ -77,7 +77,7 @@ function parseJsonLoose(text: string): unknown {
 }
 
 /** Google Gemini — pulsuz səviyyə (Google AI Studio açarı, kart tələb olunmur). */
-async function geminiRewrite(parts: unknown[]): Promise<unknown> {
+async function geminiRewrite(parts: unknown[], system: string = SYSTEM + JSON_FORMAT): Promise<unknown> {
   const key = process.env.GEMINI_API_KEY!;
   const custom = (process.env.GEMINI_MODEL || "").trim();
   const models = Array.from(new Set([...(custom ? [custom] : []), ...GEMINI_MODELS]));
@@ -89,7 +89,7 @@ async function geminiRewrite(parts: unknown[]): Promise<unknown> {
         method: "POST",
         headers: { "x-goog-api-key": key, "content-type": "application/json" },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM + JSON_FORMAT }] },
+          systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts }],
           generationConfig: { responseMimeType: "application/json", temperature: 0.8, maxOutputTokens: 16384 },
         }),
@@ -205,4 +205,20 @@ export function scrubOutlet(text: string, names: string[]): string {
     t = t.replace(new RegExp(`(^|[^\\p{L}\\p{N}])${base}(\\.[a-z]{2,6})?(?![\\p{L}\\p{N}])`, "giu"), "$1Cənub Xəbər");
   }
   return t.replace(/(Cənub Xəbər)(\s*[,-]?\s*Cənub Xəbər)+/g, "$1").replace(/[ \t]{2,}/g, " ").trim();
+}
+
+
+/* -------- "Cənub Xəbər bildirir ki" istinadı -------- */
+export const ATTRIB_RE = /Cənub Xəbər\s*(?:[,–-]\s*)?(?:\S+\s+){0,3}?(?:bildirir|məlumat verir|xəbər verir|yayır|qeyd edir)/i;
+export const hasAttribution = (text: string) => ATTRIB_RE.test(text);
+
+/** Mətnin ilk abzasını "Cənub Xəbər bildirir ki, ..." ilə başlayacaq şəkildə minimal dəyişir. */
+export async function addAttribution(firstParagraph: string): Promise<string> {
+  const system =
+    `You edit Azerbaijani news text. Rewrite the given first paragraph so that its first sentence starts with "Cənub Xəbər bildirir ki," followed by the same key fact (grammatical Azerbaijani). ` +
+    `Keep every fact, name and number unchanged, keep the rest of the paragraph as it is, do not add anything new. Respond with ONLY a JSON object: {"paragraph": string}`;
+  const raw = (await geminiRewrite([{ text: firstParagraph }], system)) as { paragraph?: unknown };
+  const p = typeof raw?.paragraph === "string" ? raw.paragraph.trim() : "";
+  if (!p || !hasAttribution(p)) throw new Error("istinad cümləsi əlavə olunmadı");
+  return p;
 }
