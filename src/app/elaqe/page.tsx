@@ -14,7 +14,7 @@ export default function Elaqe() {
       <Container className="grid gap-14 py-16 lg:grid-cols-[1fr_480px]">
         <Reveal dir="right"><ContactForm /></Reveal>
         <Reveal dir="left">
-          <div className="space-y-4 rounded-2xl bg-[#fdf3ee] p-9 text-[17px] text-[#444]">
+          <div className="space-y-4 rounded-2xl bg-[#fdf3ee] p-9 text-[15px] text-[#444]">
             <p><b className="text-navy">E-poçt:</b> <a href={`mailto:${SITE_EMAIL}`} className="hover:text-brand">{SITE_EMAIL}</a></p>
           </div>
         </Reveal>

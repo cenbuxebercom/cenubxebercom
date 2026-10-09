@@ -1,3 +1,5 @@
+import { testArticles } from "./test-articles";
+
 export type Article = {
   slug: string;
   title: string;
@@ -25,8 +27,8 @@ export const categories = [
   { name: "Səhiyyə", slug: "seheyye" },
 ];
 
-/** Xəbərlər burada saxlanılır. Hələlik boşdur — sayt xəbərsiz açılır. */
-export const articles: Article[] = [];
+/** Xəbərlər burada saxlanılır. `...testArticles` test xəbərləridir — real xəbər əlavə etdikdən sonra silin. */
+export const articles: Article[] = [...testArticles];
 
 const sorted = () => [...articles].sort((a, b) => +new Date(b.date) - +new Date(a.date));
 

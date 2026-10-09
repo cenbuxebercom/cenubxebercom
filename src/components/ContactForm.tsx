@@ -3,7 +3,7 @@ import { useState } from "react";
 import { SITE_EMAIL } from "@/data/news";
 import Magnetic from "./fx/Magnetic";
 
-const f = "h-[56px] w-full border border-[#d9d3cc] bg-white px-5 text-[17px] outline-none transition-colors focus:border-navy";
+const f = "h-[56px] w-full border border-[#d9d3cc] bg-white px-5 text-[15px] outline-none transition-colors focus:border-navy";
 
 export default function ContactForm() {
   const [name, setName] = useState("");
@@ -22,7 +22,7 @@ export default function ContactForm() {
       <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-poçt ünvanı" className={f} />
       <textarea required value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Mesajınız" rows={6} className={`${f} h-auto py-4`} />
       <Magnetic className="inline-block">
-        <button className="bg-navy px-10 py-4 text-[17px] font-medium text-white transition-colors hover:bg-[#1a1a80]">Göndər</button>
+        <button className="bg-navy px-10 py-4 text-[15px] font-medium text-white transition-colors hover:bg-[#1a1a80]">Göndər</button>
       </Magnetic>
     </form>
   );

@@ -6,10 +6,10 @@ export default function SocialBanner() {
     <Reveal className="mt-24">
       <section className="relative overflow-hidden rounded-2xl bg-[#fdf3ee] px-6 py-10 sm:px-12 sm:py-16">
         <div className="relative z-10 max-w-[680px]">
-          <h2 className="text-[30px] font-semibold leading-[1.2] tracking-[-0.04em] text-navy sm:text-[38px]">
+          <h2 className="text-[23px] font-semibold leading-[1.2] tracking-[-0.04em] text-navy sm:text-[28px]">
             Dünyadan gələn <span className="text-brand">son xəbərlər</span> üçün bizi sosial şəbəkələrdə izləyin.
           </h2>
-          <p className="mt-6 max-w-[580px] text-[18px] leading-[1.8] text-[#5a5f87]">
+          <p className="mt-6 max-w-[580px] text-[16px] leading-[1.8] text-[#5a5f87]">
             Harada olursunuz olun məlumatlı qalın — oxucu və izləyici icmamıza qoşulun.
           </p>
         </div>

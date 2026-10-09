@@ -19,8 +19,8 @@ export default function Kateqoriyalar() {
             <Tilt>
               <Link href={`/kateqoriya/${c.slug}`} className="group flex items-center justify-between rounded-2xl border border-[#e6e1db] p-7 transition-colors hover:border-brand">
                 <span>
-                  <span className="block text-[22px] font-semibold tracking-[-0.02em]">{c.name}</span>
-                  <span className="text-[15px] text-[#6f6f6f]">{byCategory(c.slug).length} xəbər</span>
+                  <span className="block text-[18px] font-semibold tracking-[-0.02em]">{c.name}</span>
+                  <span className="text-[13px] text-[#6f6f6f]">{byCategory(c.slug).length} xəbər</span>
                 </span>
                 <ArrowRight className="h-5 w-5 text-brand transition-transform group-hover:translate-x-1" />
               </Link>

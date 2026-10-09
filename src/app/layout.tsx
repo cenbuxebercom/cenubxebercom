@@ -5,10 +5,8 @@ import "./globals.css";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Preloader from "@/components/fx/Preloader";
 import SmoothScroll from "@/components/fx/SmoothScroll";
 import ScrollProgress from "@/components/fx/ScrollProgress";
-import Cursor from "@/components/fx/Cursor";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin", "latin-ext"] });
 
@@ -23,13 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="az" className={`${inter.variable} antialiased`}>
       <body className="flex min-h-screen flex-col">
-        <noscript><style>{`.preloader{display:none!important}`}</style></noscript>
-        <Preloader />
         <SmoothScroll />
         <ScrollProgress />
-        <Cursor />
         <TopBar />
-        <Suspense fallback={<div className="h-[88px] bg-navy md:h-[111px]" />}>
+        <Suspense fallback={<div className="h-[61px] bg-navy" />}>
           <Header />
         </Suspense>
         <main className="flex-1">{children}</main>

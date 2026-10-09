@@ -15,3 +15,9 @@ export const LinkedinIcon = ({ className }: P) => (
 export const ArrowRight = ({ className }: P) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14M13 6l6 6-6 6"/></svg>
 );
+export const YoutubeIcon = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
+);
+export const TelegramIcon = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}><path d="M9.8 15.6l-.4 5.6c.6 0 .9-.3 1.2-.6l2.9-2.8 6 4.4c1.1.6 1.9.3 2.2-1L23.9 3.9c.4-1.6-.6-2.2-1.6-1.8L1.2 10.2c-1.5.6-1.5 1.4-.3 1.8l5.4 1.7L18.8 6c.6-.4 1.1-.2.7.2L9.8 15.6z"/></svg>
+);

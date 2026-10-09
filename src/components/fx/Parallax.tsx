@@ -9,7 +9,7 @@ export default function Parallax({ children, className, amount = 40 }: { childre
   const y = useTransform(scrollYProgress, [0, 1], [-amount, amount]);
   return (
     <div ref={ref} className={`overflow-hidden ${className ?? ""}`}>
-      <motion.div style={{ y, scale: 1.12 }} className="h-full w-full">{children}</motion.div>
+      <motion.div style={{ y, scale: 1.15 }} className="h-full w-full">{children}</motion.div>
     </div>
   );
 }
