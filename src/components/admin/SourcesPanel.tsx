@@ -74,6 +74,7 @@ export default function SourcesPanel({ flash, onImported }: { flash: (t: "ok" | 
         else if (r.status === "done") { created++; say(`  ✔ əlavə olundu${r.published ? "" : " (qaralama)"}: ${r.title}`); }
         else if (r.status === "skipped") say(`  – ötürüldü: ${r.reason}`);
         else say(`  ✖ xəta: ${r.error}`);
+        await new Promise((res) => setTimeout(res, 4000)); // pulsuz AI limitinə hörmət
       }
     }
     setRunning(false);

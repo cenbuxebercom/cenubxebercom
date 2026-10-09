@@ -30,6 +30,7 @@ export async function GET(req: Request) {
       for (const c of fresh) {
         if (Date.now() - started > budget) break;
         const r = await processItem(s, c);
+        await new Promise((res) => setTimeout(res, 5000)); // pulsuz AI limitinə hörmət
         if (r.status === "done") { row.done++; if (r.published) publishedAny = true; }
         else if (r.status === "skipped") row.skipped++;
         else row.failed++;

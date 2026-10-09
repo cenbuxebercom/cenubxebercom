@@ -53,7 +53,13 @@ async function send(payload: Record<string, unknown>): Promise<MailResult> {
     });
     if (res.ok) return { ok: true };
     const body = await res.json().catch(() => null);
-    const msg = `Resend ${res.status}: ${body?.message ?? body?.name ?? "bilinməyən xəta"}`;
+    const detail: string = body?.message ?? body?.name ?? "bilinməyən xəta";
+    const hint = /not verified|verify/i.test(detail)
+      ? " → Resend → Domains bölməsində cenubxeber.com domenini təsdiqləyin (DNS qeydləri Cloudflare-də)."
+      : /only send testing emails|own email/i.test(detail)
+        ? " → Domen təsdiqlənməyib: yalnız Resend hesabının öz e-poçtuna göndərmək olar. Domeni təsdiqləyin."
+        : "";
+    const msg = `Resend ${res.status}: ${detail}${hint}`;
     console.error("[mail]", msg);
     return { ok: false, error: msg };
   } catch (e) {
@@ -63,9 +69,17 @@ async function send(payload: Record<string, unknown>): Promise<MailResult> {
   }
 }
 
+/** CONTACT_FROM_EMAIL hansı formatda yazılsa da (dırnaq, "Ad <e-poçt>" və ya sadəcə e-poçt) düzgün `from` düzəldir. */
+function fromAddress(): string {
+  const raw = (process.env.CONTACT_FROM_EMAIL || "").trim().replace(/^["'\s]+|["'\s]+$/g, "");
+  const m = /<\s*([^<>\s]+@[^<>\s]+)\s*>/.exec(raw) || /^([^<>\s"',;]+@[^<>\s"',;]+)$/.exec(raw);
+  const email = m ? m[1] : "noreply@cenubxeber.com";
+  return `Cenub Xeber <${email}>`;
+}
+
 const target = () => ({
-  to: process.env.CONTACT_TO_EMAIL || SITE_EMAIL,
-  from: process.env.CONTACT_FROM_EMAIL || "Cənub Xəbər <noreply@cenubxeber.com>",
+  to: (process.env.CONTACT_TO_EMAIL || SITE_EMAIL).trim().replace(/^["'\s]+|["'\s]+$/g, ""),
+  from: fromAddress(),
 });
 
 /** Əlaqə formundan gələn mesajı redaksiyanın e-poçtuna göndərir (Resend). */

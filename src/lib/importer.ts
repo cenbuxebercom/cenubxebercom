@@ -57,7 +57,7 @@ async function uploadToImgbb(blob: Blob, name: string): Promise<string> {
 export async function processItem(source: Source, cand: Candidate): Promise<ProcessResult> {
   const db = getDb();
   if (!db) return { status: "failed", error: "Supabase təyin edilməyib" };
-  if (!aiConfigured()) return { status: "failed", error: "ANTHROPIC_API_KEY Vercel-də təyin edilməyib" };
+  if (!aiConfigured()) return { status: "failed", error: "AI açarı təyin edilməyib — Vercel-də GEMINI_API_KEY (pulsuz) əlavə edin" };
   const url = cand.url;
   try {
     assertPublicHttpUrl(url);

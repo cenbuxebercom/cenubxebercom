@@ -43,8 +43,9 @@ Vercel → layihə → **Settings → Environment Variables**. Aşağıdakılar�
 | `ADMIN_EMAIL` | Admin e-poçtu | Admin panelə giriş |
 | `ADMIN_PASSWORD` | Admin parolu | Admin panelə giriş (məxfi!) |
 | `ADMIN_SESSION_SECRET` | Təsadüfi uzun mətn (≥ 32 simvol) | Giriş sessiyasını imzalamaq (məxfi!) |
-| `ANTHROPIC_API_KEY` | Anthropic (Claude) API açarı | Başqa saytlardan çəkilən xəbərləri AI ilə yenidən yazmaq |
-| `ANTHROPIC_MODEL` *(istəyə bağlı)* | məs. `claude-opus-5-5` (defolt) | Yenidən yazan AI modeli; ucuz variant: `claude-sonnet-5-5` |
+| `GEMINI_API_KEY` | Google AI Studio açarı (**pulsuz**) | Başqa saytlardan çəkilən xəbərləri AI ilə yenidən yazmaq |
+| `GEMINI_MODEL` *(istəyə bağlı)* | `gemini-3.8-flash` (defolt) | Yenidən yazan pulsuz model |
+| `ANTHROPIC_API_KEY` *(istəyə bağlı, ödənişli)* | Anthropic API açarı | Yalnız `GEMINI_API_KEY` yoxdursa istifadə olunur |
 | `CRON_SECRET` | Təsadüfi uzun mətn (`openssl rand -hex 24`) | Gündəlik avtomatik çəkməni (cron) qorumaq |
 | `RESEND_API_KEY` | Resend API açarı | Əlaqə formundan gələn mesajı `info@cenubxeber.com`-a e-poçtla göndərmək |
 | `CONTACT_TO_EMAIL` *(istəyə bağlı)* | `info@cenubxeber.com` | Mesajın düşəcəyi ünvan (boş qalsa `info@cenubxeber.com`) |
@@ -96,7 +97,11 @@ Resend qurulmayıbsa mesajlar yenə də admin paneldə "Mesajlar" bölməsində 
 (fayl təkrar işə salınanda təhlükəsizdir; yalnız çatışmayan sütun/cədvəlləri əlavə edir: `sources`, `import_log`,
 `articles.source_url / source_name / imported`).
 
-**Açar:** https://console.anthropic.com → API Keys → açar yaradın → Vercel-də `ANTHROPIC_API_KEY`. Redeploy.
+**Pulsuz AI açarı (xərc yoxdur):** https://aistudio.google.com/apikey → Google hesabı ilə daxil ol → **Create API key** (kart tələb olunmur) →
+Vercel-də `GEMINI_API_KEY` kimi əlavə et → Redeploy. Pulsuz səviyyənin dəqiqəlik/günlük limiti var; bot xəbərlər arasında gözləyir və
+limit dolanda xəta yazır (bir az sonra və ya sabah yenidən “Çək” basın). Pulsuz səviyyədə Google göndərilən məzmunu məhsullarını
+yaxşılaşdırmaq üçün istifadə edə bilər — burada yalnız ictimai xəbər mətnləri göndərilir.
+(İstəsəniz ödənişli `ANTHROPIC_API_KEY` də istifadə oluna bilər; `GEMINI_API_KEY` varsa o prioritetdir.)
 
 **İstifadə:** `/adminpanel` → **Avto-çəkmə**:
 1. Mənbə əlavə edin: ad + RSS linki (məs. `https://sayt.az/rss`) və ya saytın ana/bölmə səhifəsi. RSS tapılmasa sistem

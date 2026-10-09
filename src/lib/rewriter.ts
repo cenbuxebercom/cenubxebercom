@@ -44,14 +44,63 @@ SECURITY
 let client: Anthropic | null = null;
 const getClient = () => (client ??= new Anthropic());
 
-export const aiConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY);
+export type Provider = "gemini" | "anthropic";
 
-export async function rewriteArticle(input: { title: string; text: string; outletNames: string[]; retryNote?: string }): Promise<Rewritten> {
-  const user =
-    `<source_article>\n<title>${input.title}</title>\n<text>\n${input.text}\n</text>\n</source_article>\n\n` +
-    `Outlet names / domains that must not appear in your article: ${input.outletNames.filter(Boolean).join(", ") || "(none)"}.` +
-    (input.retryNote ? `\n\n${input.retryNote}` : "");
+/** Hansı AI istifadə olunur: GEMINI_API_KEY (pulsuz) → ANTHROPIC_API_KEY (ödənişli). AI_PROVIDER ilə məcburi seçmək olar. */
+export function aiProvider(): Provider | null {
+  const forced = process.env.AI_PROVIDER;
+  if (forced === "anthropic" && process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (forced === "gemini" && process.env.GEMINI_API_KEY) return "gemini";
+  if (process.env.GEMINI_API_KEY) return "gemini";
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  return null;
+}
+export const aiConfigured = () => aiProvider() !== null;
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const JSON_FORMAT = `
+
+Respond with ONLY one JSON object (no markdown, no code fences) with exactly these keys:
+{"skip": boolean, "skip_reason": string, "title": string, "excerpt": string, "body": string, "category": one of [${slugs.join(", ")}]}`;
+
+/** Google Gemini — pulsuz səviyyə (Google AI Studio açarı, kart tələb olunmur). */
+async function geminiRewrite(user: string): Promise<unknown> {
+  const key = process.env.GEMINI_API_KEY!;
+  const model = (process.env.GEMINI_MODEL || "gemini-3.8-flash").trim();
+  let lastErr = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM + JSON_FORMAT }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.8, maxOutputTokens: 16384 },
+      }),
+      signal: AbortSignal.timeout(100_000),
+    });
+    if (res.status === 429 || res.status === 503) {
+      lastErr = res.status === 429 ? "Gemini pulsuz limiti doldu (dəqiqəlik/günlük). Bir az gözləyib yenidən cəhd edin" : "Gemini müvəqqəti məşğuldur";
+      await sleep(8000 * (attempt + 1));
+      continue;
+    }
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(`Gemini ${res.status}: ${data?.error?.message ?? "xəta"}`.slice(0, 300));
+    if (data?.promptFeedback?.blockReason) throw new Error(`Gemini materialı blokladı (${data.promptFeedback.blockReason})`);
+    const parts: { text?: string; thought?: boolean }[] = data?.candidates?.[0]?.content?.parts ?? [];
+    const text = parts.filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim();
+    if (!text) throw new Error(`Gemini boş cavab qaytardı (${data?.candidates?.[0]?.finishReason ?? "?"})`);
+    try {
+      return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+    } catch {
+      throw new Error("Gemini cavabı JSON formatında deyil");
+    }
+  }
+  throw new Error(lastErr || "Gemini cavab vermədi");
+}
+
+async function anthropicRewrite(user: string): Promise<Rewritten> {
   const res = await getClient().messages.parse({
     model: process.env.ANTHROPIC_MODEL || "claude-opus-5-5",
     max_tokens: 12000,
@@ -62,6 +111,30 @@ export async function rewriteArticle(input: { title: string; text: string; outle
   if (res.stop_reason === "refusal") throw new Error("AI bu materialı yazmaqdan imtina etdi");
   if (!res.parsed_output) throw new Error("AI cavabı oxunmadı (format xətası)");
   return res.parsed_output;
+}
+
+export async function rewriteArticle(input: { title: string; text: string; outletNames: string[]; retryNote?: string }): Promise<Rewritten> {
+  const user =
+    `<source_article>\n<title>${input.title}</title>\n<text>\n${input.text}\n</text>\n</source_article>\n\n` +
+    `Outlet names / domains that must not appear in your article: ${input.outletNames.filter(Boolean).join(", ") || "(none)"}.` +
+    (input.retryNote ? `\n\n${input.retryNote}` : "");
+
+  const provider = aiProvider();
+  if (!provider) throw new Error("AI açarı təyin edilməyib (pulsuz variant: GEMINI_API_KEY)");
+  if (provider === "anthropic") return anthropicRewrite(user);
+
+  const raw = await geminiRewrite(user);
+  const parsed = Out.safeParse(raw);
+  if (parsed.success) return parsed.data;
+  // kateqoriya düzgün yazılmayıbsa, qalanını qəbul et
+  const r = raw as Record<string, unknown>;
+  if (r && typeof r === "object" && typeof r.body === "string" && typeof r.title === "string") {
+    return {
+      skip: Boolean(r.skip), skip_reason: String(r.skip_reason ?? ""), title: r.title, excerpt: String(r.excerpt ?? ""),
+      body: r.body, category: (slugs as string[]).includes(String(r.category)) ? (r.category as Rewritten["category"]) : slugs[2],
+    };
+  }
+  throw new Error("AI cavabı gözlənilən formatda deyil");
 }
 
 /* -------- keyfiyyət yoxlamaları -------- */
